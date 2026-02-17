@@ -1,0 +1,271 @@
+{
+  "info": {
+    "name": "Furniture Quotation API - Updated",
+    "description": "Updated collection with new quotation numbering and wood/polish/fabric on quotation items",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "categoryId", "value": "", "type": "string" },
+    { "key": "productTypeId", "value": "", "type": "string" },
+    { "key": "productModelId", "value": "", "type": "string" },
+    { "key": "woodId", "value": "", "type": "string" },
+    { "key": "polishId", "value": "", "type": "string" },
+    { "key": "fabricId", "value": "", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" },
+    { "key": "customerId", "value": "", "type": "string" },
+    { "key": "quotationId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "salesManagerId", "value": "", "type": "string" },
+    { "key": "otpLogId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data) {", "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);", "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@furniture.com\",\n  \"password\": \"Admin@123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data) {", "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);", "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/refresh-token", "host": ["{{baseUrl}}"], "path": ["auth", "refresh-token"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products (No Wood/Polish/Fabric)",
+      "item": [
+        {
+          "name": "Get All Products",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data && jsonData.data.length > 0) {", "    pm.collectionVariables.set('productId', jsonData.data[0].id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["products"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }] }
+          }
+        },
+        {
+          "name": "Create Product (No Wood/Polish/Fabric)",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data) {", "    pm.collectionVariables.set('productId', jsonData.data.id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"L-Shaped Sofa Premium\",\n  \"partCode\": \"S01_V1(Sx)\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"productTypeId\": \"{{productTypeId}}\",\n  \"productModelId\": \"{{productModelId}}\",\n  \"length\": 2400,\n  \"width\": 900,\n  \"height\": 850,\n  \"description\": \"Premium L-Shaped sofa. Wood, polish, fabric selected at quotation time.\",\n  \"basePrice\": 185000,\n  \"defaultDiscount\": 10,\n  \"gstPercent\": 18,\n  \"images\": [\"https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800\"],\n  \"status\": \"active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Woods (Standalone Master)",
+      "item": [
+        {
+          "name": "Get All Woods",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data && jsonData.data.length > 0) {", "    pm.collectionVariables.set('woodId', jsonData.data[0].id);", "}"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/woods", "host": ["{{baseUrl}}"], "path": ["woods"] } }
+        }
+      ]
+    },
+    {
+      "name": "Polishes (Standalone Master)",
+      "item": [
+        {
+          "name": "Get All Polishes",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data && jsonData.data.length > 0) {", "    pm.collectionVariables.set('polishId', jsonData.data[0].id);", "}"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/polishes", "host": ["{{baseUrl}}"], "path": ["polishes"] } }
+        }
+      ]
+    },
+    {
+      "name": "Fabrics (Standalone Master)",
+      "item": [
+        {
+          "name": "Get All Fabrics",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data && jsonData.data.length > 0) {", "    pm.collectionVariables.set('fabricId', jsonData.data[0].id);", "}"], "type": "text/javascript" } }],
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/fabrics", "host": ["{{baseUrl}}"], "path": ["fabrics"] } }
+        }
+      ]
+    },
+    {
+      "name": "Quotations (Updated)",
+      "item": [
+        {
+          "name": "Get Next Quotation Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations/next-number?date=2025-06-15", "host": ["{{baseUrl}}"], "path": ["quotations", "next-number"], "query": [{ "key": "date", "value": "2025-06-15" }] },
+            "description": "Returns QT-20250615-0001 format. Pass date query param."
+          }
+        },
+        {
+          "name": "Get Next Number (No Date = Today)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations/next-number", "host": ["{{baseUrl}}"], "path": ["quotations", "next-number"] },
+            "description": "Uses today date when no date param given"
+          }
+        },
+        {
+          "name": "Get Quotation Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations/stats", "host": ["{{baseUrl}}"], "path": ["quotations", "stats"] }
+          }
+        },
+        {
+          "name": "Get All Quotations",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data && jsonData.data.length > 0) {", "    pm.collectionVariables.set('quotationId', jsonData.data[0].id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations?page=1&limit=10&sortBy=createdAt&sortOrder=DESC", "host": ["{{baseUrl}}"], "path": ["quotations"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }, { "key": "sortBy", "value": "createdAt" }, { "key": "sortOrder", "value": "DESC" }] }
+          }
+        },
+        {
+          "name": "Get Quotation by ID (with items + wood/polish/fabric)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations/{{quotationId}}", "host": ["{{baseUrl}}"], "path": ["quotations", "{{quotationId}}"] },
+            "description": "Returns full quotation with items including wood, polish, fabric details on each item"
+          }
+        },
+        {
+          "name": "Create Quotation (Wood/Polish/Fabric on Items)",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data) {", "    pm.collectionVariables.set('quotationId', jsonData.data.id);", "    pm.test('Quotation number format', function() {", "        pm.expect(jsonData.data.quotationNo).to.match(/^QT-\\d{8}-\\d{4}$/);", "    });", "    if (jsonData.data.items && jsonData.data.items.length > 0) {", "        pm.test('Item number format', function() {", "            pm.expect(jsonData.data.items[0].quotationProductNo).to.match(/^QT-\\d{8}-\\d{4}-P\\d{5}$/);", "        });", "    }", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2025-06-15\",\n  \"customerId\": \"{{customerId}}\",\n  \"salesManager\": \"ESIPL\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productCode\": \"S00_Vx(Sx)\",\n      \"productName\": \"Sectional Sofa - Living Room\",\n      \"description\": \"Base frame: Teakwood with P.U polish. Upholstery: Artificial leather\",\n      \"images\": [\"https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800\"],\n      \"woodId\": \"{{woodId}}\",\n      \"woodName\": \"Teakwood\",\n      \"polishId\": \"{{polishId}}\",\n      \"polishName\": \"P.U Polish (Water Based)\",\n      \"fabricId\": \"{{fabricId}}\",\n      \"fabricName\": \"Artificial Leather\",\n      \"basePrice\": 265000,\n      \"discountPercent\": 15,\n      \"discountAmount\": 39750,\n      \"finalPrice\": 225250,\n      \"quantity\": 1,\n      \"total\": 225250,\n      \"gstPercent\": 18,\n      \"igst\": 0,\n      \"cgst\": 20273,\n      \"sgst\": 20273,\n      \"totalWithGst\": 265795,\n      \"notes\": [\"Sectional Sofa\", \"Teakwood frame\", \"P.U polish\", \"Artificial leather\"]\n    }\n  ],\n  \"subtotal\": 225250,\n  \"totalDiscount\": 39750,\n  \"igst\": 0,\n  \"cgst\": 20273,\n  \"sgst\": 20273,\n  \"grandTotal\": 225250,\n  \"grandTotalWithGst\": 265795,\n  \"status\": \"draft\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/quotations", "host": ["{{baseUrl}}"], "path": ["quotations"] },
+            "description": "Creates quotation with format QT-20250615-0001. Each item gets QT-20250615-0001-P00001. Wood/polish/fabric are on each item."
+          }
+        },
+        {
+          "name": "Create Quotation (Multiple Items, Different Materials)",
+          "event": [{ "listen": "test", "script": { "exec": ["var jsonData = pm.response.json();", "if (jsonData.success && jsonData.data) {", "    pm.collectionVariables.set('quotationId', jsonData.data.id);", "}"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2025-06-15\",\n  \"customerId\": \"{{customerId}}\",\n  \"salesManager\": \"Raj Kumar\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productCode\": \"S00_Vx(Sx)\",\n      \"productName\": \"Sectional Sofa\",\n      \"description\": \"Oak wood with Natural Finish, Velvet upholstery\",\n      \"images\": [],\n      \"woodId\": \"{{woodId}}\",\n      \"woodName\": \"Oak\",\n      \"polishId\": \"{{polishId}}\",\n      \"polishName\": \"Natural Finish\",\n      \"fabricId\": \"{{fabricId}}\",\n      \"fabricName\": \"Velvet\",\n      \"basePrice\": 265000,\n      \"discountPercent\": 10,\n      \"discountAmount\": 26500,\n      \"finalPrice\": 238500,\n      \"quantity\": 1,\n      \"total\": 238500,\n      \"gstPercent\": 18,\n      \"igst\": 0,\n      \"cgst\": 21465,\n      \"sgst\": 21465,\n      \"totalWithGst\": 281430,\n      \"notes\": [\"Oak frame\", \"Velvet upholstery\"]\n    },\n    {\n      \"productId\": \"{{productId}}\",\n      \"productCode\": \"LT00_Vx(Sx)\",\n      \"productName\": \"Center Table\",\n      \"description\": \"M.S Frame with Satin Black paint\",\n      \"images\": [],\n      \"woodId\": \"{{woodId}}\",\n      \"woodName\": \"M.S Frame\",\n      \"polishId\": \"{{polishId}}\",\n      \"polishName\": \"P.U Paint (Satin Black)\",\n      \"fabricId\": null,\n      \"fabricName\": null,\n      \"basePrice\": 54600,\n      \"discountPercent\": 10,\n      \"discountAmount\": 5460,\n      \"finalPrice\": 49140,\n      \"quantity\": 1,\n      \"total\": 49140,\n      \"gstPercent\": 18,\n      \"igst\": 0,\n      \"cgst\": 4423,\n      \"sgst\": 4423,\n      \"totalWithGst\": 57985,\n      \"notes\": [\"No fabric needed for table\"]\n    }\n  ],\n  \"subtotal\": 287640,\n  \"totalDiscount\": 31960,\n  \"igst\": 0,\n  \"cgst\": 25888,\n  \"sgst\": 25888,\n  \"grandTotal\": 287640,\n  \"grandTotalWithGst\": 339415,\n  \"status\": \"draft\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/quotations", "host": ["{{baseUrl}}"], "path": ["quotations"] },
+            "description": "Two items with different wood/polish/fabric. Item 2 has no fabric (null). Shows QT-20250615-0002 if same date."
+          }
+        },
+        {
+          "name": "Update Quotation (Change Materials)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salesManager\": \"Anita Desai\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productCode\": \"S00_Vx(Sx)\",\n      \"productName\": \"Sectional Sofa - Updated Materials\",\n      \"description\": \"Changed to Walnut wood with Matte Finish, Premium Fabric\",\n      \"images\": [],\n      \"woodId\": \"{{woodId}}\",\n      \"woodName\": \"Walnut\",\n      \"polishId\": \"{{polishId}}\",\n      \"polishName\": \"Matte Finish\",\n      \"fabricId\": \"{{fabricId}}\",\n      \"fabricName\": \"Premium Fabric\",\n      \"basePrice\": 265000,\n      \"discountPercent\": 20,\n      \"discountAmount\": 53000,\n      \"finalPrice\": 212000,\n      \"quantity\": 1,\n      \"total\": 212000,\n      \"gstPercent\": 18,\n      \"igst\": 0,\n      \"cgst\": 19080,\n      \"sgst\": 19080,\n      \"totalWithGst\": 250160,\n      \"notes\": [\"Materials changed\", \"Walnut + Matte + Premium Fabric\"]\n    }\n  ],\n  \"subtotal\": 212000,\n  \"totalDiscount\": 53000,\n  \"igst\": 0,\n  \"cgst\": 19080,\n  \"sgst\": 19080,\n  \"grandTotal\": 212000,\n  \"grandTotalWithGst\": 250160\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/quotations/{{quotationId}}", "host": ["{{baseUrl}}"], "path": ["quotations", "{{quotationId}}"] },
+            "description": "Update quotation - items get re-numbered with same quotation number"
+          }
+        },
+        {
+          "name": "Update Status (sent)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"sent\"\n}" },
+            "url": { "raw": "{{baseUrl}}/quotations/{{quotationId}}/status", "host": ["{{baseUrl}}"], "path": ["quotations", "{{quotationId}}", "status"] }
+          }
+        },
+        {
+          "name": "Update Status (approved)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\"\n}" },
+            "url": { "raw": "{{baseUrl}}/quotations/{{quotationId}}/status", "host": ["{{baseUrl}}"], "path": ["quotations", "{{quotationId}}", "status"] }
+          }
+        },
+        {
+          "name": "Delete Quotation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/quotations/{{quotationId}}", "host": ["{{baseUrl}}"], "path": ["quotations", "{{quotationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/dashboard/stats", "host": ["{{baseUrl}}"], "path": ["dashboard", "stats"] }
+          }
+        }
+      ]
+    }
+  ]
+}
