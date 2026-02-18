@@ -32,7 +32,7 @@
     "puppeteer": "^24.37.3",
     "sequelize": "^6.37.7",
     "tsconfig-paths": "^4.2.0",
-    "uuid": "^13.0.0",
+    "uuid": "^8.3.2",
     "winston": "^3.19.0",
     "xss-clean": "^0.1.4",
     "zod": "^4.3.6"
