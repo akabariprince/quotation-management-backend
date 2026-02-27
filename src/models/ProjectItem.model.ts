@@ -1,5 +1,5 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/sequelize';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/sequelize";
 
 interface ProjectItemAttributes {
   id: string;
@@ -9,6 +9,7 @@ interface ProjectItemAttributes {
   quotationCode: string;
   quotationName: string;
   description: string | null;
+  specialNote: string | null;
   images: string[];
   woodId: string | null;
   woodName: string | null;
@@ -33,29 +34,29 @@ interface ProjectItemAttributes {
   updatedAt: Date;
 }
 
-interface ProjectItemCreationAttributes
-  extends Optional<
-    ProjectItemAttributes,
-    | 'id'
-    | 'projectQuotationNo'
-    | 'description'
-    | 'images'
-    | 'woodId'
-    | 'woodName'
-    | 'polishId'
-    | 'polishName'
-    | 'fabricId'
-    | 'fabricName'
-    | 'discountPercent'
-    | 'discountAmount'
-    | 'igst'
-    | 'cgst'
-    | 'sgst'
-    | 'notes'
-    | 'sortOrder'
-    | 'createdAt'
-    | 'updatedAt'
-  > {}
+interface ProjectItemCreationAttributes extends Optional<
+  ProjectItemAttributes,
+  | "id"
+  | "projectQuotationNo"
+  | "description"
+  | "specialNote"
+  | "images"
+  | "woodId"
+  | "woodName"
+  | "polishId"
+  | "polishName"
+  | "fabricId"
+  | "fabricName"
+  | "discountPercent"
+  | "discountAmount"
+  | "igst"
+  | "cgst"
+  | "sgst"
+  | "notes"
+  | "sortOrder"
+  | "createdAt"
+  | "updatedAt"
+> {}
 
 class ProjectItem
   extends Model<ProjectItemAttributes, ProjectItemCreationAttributes>
@@ -68,6 +69,7 @@ class ProjectItem
   public quotationCode!: string;
   public quotationName!: string;
   public description!: string | null;
+  public specialNote!: string | null;
   public images!: string[];
   public woodId!: string | null;
   public woodName!: string | null;
@@ -102,29 +104,34 @@ ProjectItem.init(
     projectId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'project_id',
+      field: "project_id",
     },
     projectQuotationNo: {
       type: DataTypes.STRING(30),
       allowNull: false,
-      field: 'project_quotation_no',
+      field: "project_quotation_no",
     },
     quotationId: {
       type: DataTypes.UUID,
       allowNull: false,
-      field: 'quotation_id',
+      field: "quotation_id",
     },
     quotationCode: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      field: 'quotation_code',
+      field: "quotation_code",
     },
     quotationName: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      field: 'quotation_name',
+      field: "quotation_name",
     },
     description: { type: DataTypes.TEXT, allowNull: true },
+    specialNote: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: "special_note",
+    },
     images: {
       type: DataTypes.JSONB,
       allowNull: false,
@@ -133,54 +140,54 @@ ProjectItem.init(
     woodId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'wood_id',
+      field: "wood_id",
     },
     woodName: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'wood_name',
+      field: "wood_name",
     },
     polishId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'polish_id',
+      field: "polish_id",
     },
     polishName: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'polish_name',
+      field: "polish_name",
     },
     fabricId: {
       type: DataTypes.UUID,
       allowNull: true,
-      field: 'fabric_id',
+      field: "fabric_id",
     },
     fabricName: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      field: 'fabric_name',
+      field: "fabric_name",
     },
     basePrice: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
-      field: 'base_price',
+      field: "base_price",
     },
     discountPercent: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
       defaultValue: 0,
-      field: 'discount_percent',
+      field: "discount_percent",
     },
     discountAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
-      field: 'discount_amount',
+      field: "discount_amount",
     },
     finalPrice: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
-      field: 'final_price',
+      field: "final_price",
     },
     quantity: {
       type: DataTypes.INTEGER,
@@ -195,7 +202,7 @@ ProjectItem.init(
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
       defaultValue: 18,
-      field: 'gst_percent',
+      field: "gst_percent",
     },
     igst: {
       type: DataTypes.DECIMAL(12, 2),
@@ -215,7 +222,7 @@ ProjectItem.init(
     totalWithGst: {
       type: DataTypes.DECIMAL(14, 2),
       allowNull: false,
-      field: 'total_with_gst',
+      field: "total_with_gst",
     },
     notes: {
       type: DataTypes.JSONB,
@@ -226,17 +233,17 @@ ProjectItem.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
-      field: 'sort_order',
+      field: "sort_order",
     },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, field: "created_at" },
+    updatedAt: { type: DataTypes.DATE, field: "updated_at" },
   },
   {
     sequelize,
-    tableName: 'project_items',
+    tableName: "project_items",
     timestamps: true,
     underscored: true,
-  }
+  },
 );
 
 export default ProjectItem;

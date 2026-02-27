@@ -12,10 +12,30 @@ if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR, { recursive: true });
 }
 
+// ─── Logo base64 (load once at startup) ──────────────────
+let LOGO_BASE64 = "";
+const logoCandidates = [
+  path.join(process.cwd(), "public", "logo.png"),
+  path.join(process.cwd(), "uploads", "logo.png"),
+  path.join(process.cwd(), "logo.png"),
+];
+for (const logoPath of logoCandidates) {
+  try {
+    if (fs.existsSync(logoPath)) {
+      const data = fs.readFileSync(logoPath);
+      LOGO_BASE64 = `data:image/png;base64,${data.toString("base64")}`;
+      logger.info(`Logo loaded from ${logoPath}`);
+      break;
+    }
+  } catch {
+    /* skip */
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────
 function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(
-    Number(amount) || 0
+    Number(amount) || 0,
   );
 }
 
@@ -94,54 +114,60 @@ function buildProjectHTML(project: any): string {
   const border = "1.5px solid #000";
   const borderThin = "1px solid #000";
 
+  // ── Logo HTML ──
+  const logoHtml = LOGO_BASE64
+    ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:52px;width:auto;object-fit:contain;" />`
+    : `<div style="font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;">ecstatics<span>.</span></div>`;
+
   // ── Company Header ──────────────────────────────────────
+  // ★ FE has display:flex COMMENTED OUT on inner div → logo & text stack vertically
   const companyHeader = (rightLabel: string) => `
-    <div style="display:flex; border-bottom:${border};">
-      <div style="flex:1; padding:16px 20px; border-right:${border};">
-        <div style="font-size:28px; font-weight:800; letter-spacing:-1px; line-height:1;">
-          ecstatics<span>.</span>
+    <div style="display:flex;border-bottom:${border};">
+      <div style="flex:1;padding:12px 20px;border-right:${border};align-items:center;">
+        <div style="flex-shrink:0;">
+          ${logoHtml}
         </div>
-        <div style="font-size:9px; margin-top:6px; color:#333; line-height:1.5;">
-          <div>Ecstatics Spaces India Pvt. Ltd.</div>
+        <div style="font-size:9px;color:#333;line-height:1.5;">
+          <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
           <div>3120, Ganga Trueno, Airport Road,</div>
           <div>Viman Nagar, Pune</div>
           <div style="margin-top:2px;">GST No: 27AAFCE9942B1ZM</div>
         </div>
       </div>
-      <div style="width:160px; display:flex; align-items:center; justify-content:center; padding:16px;">
-        <div style="font-size:20px; font-weight:700; letter-spacing:0.5px;">${rightLabel}</div>
+      <div style="width:160px;display:flex;align-items:center;justify-content:center;padding:16px;">
+        <div style="font-size:20px;font-weight:700;letter-spacing:0.5px;">${rightLabel}</div>
       </div>
     </div>`;
 
   // ── Client Info Row ─────────────────────────────────────
   const clientInfoRow = () => `
-    <div style="display:flex; border-bottom:${border};">
-      <div style="flex:1; padding:10px 20px; border-right:${border}; font-size:10px;">
-        <div style="display:flex; gap:8px; margin-bottom:4px;">
-          <span style="color:#666; min-width:75px;">Client name</span>
+    <div style="display:flex;border-bottom:${border};">
+      <div style="flex:1;padding:10px 20px;border-right:${border};font-size:10px;">
+        <div style="display:flex;gap:8px;margin-bottom:4px;">
+          <span style="color:#666;min-width:75px;">Client name</span>
           <span style="font-weight:600;">${customer.name || ""}</span>
         </div>
-        <div style="display:flex; gap:8px;">
-          <span style="color:#666; min-width:75px;">Contact No</span>
+        <div style="display:flex;gap:8px;">
+          <span style="color:#666;min-width:75px;">Contact No</span>
           <span>${customer.mobile || ""}</span>
         </div>
       </div>
-      <div style="width:160px; padding:10px 20px; font-size:10px; text-align:right;">
-        <div style="color:#666; margin-bottom:4px;">Date</div>
+      <div style="width:160px;padding:10px 20px;font-size:10px;text-align:right;">
+        <div style="color:#666;margin-bottom:4px;">Date</div>
         <div style="font-weight:600;">${formatDate(project.date)}</div>
       </div>
     </div>`;
 
-  // ── Page Footer (with border-top — used on page 1 & T&C) ──
+  // ── Page Footer (with border-top) ──
   const pageFooter = () => `
-    <div style="border-top:${border}; padding:8px 20px; display:flex; justify-content:space-between; font-size:9px; color:#555; background-color:#fafafa;">
+    <div style="border-top:${border};padding:8px 20px;display:flex;justify-content:space-between;font-size:9px;color:#555;background-color:#fafafa;">
       <span>(+91) 7066 46 6060</span>
       <span>info@esipl.in</span>
     </div>`;
 
   // ── Product Page Footer (NO border-top — matches FE) ───
   const productPageFooter = () => `
-    <div style="padding:8px 20px; display:flex; justify-content:space-between; font-size:9px; color:#555; background-color:#fafafa;">
+    <div style="padding:8px 20px;display:flex;justify-content:space-between;font-size:9px;color:#555;background-color:#fafafa;">
       <span>(+91) 7066 46 6060</span>
       <span>info@esipl.in</span>
     </div>`;
@@ -152,83 +178,83 @@ function buildProjectHTML(project: any): string {
     .map(
       (item: any, index: number) => `
     <tr>
-      <td style="border-bottom:1px solid #ccc; border-right:${borderThin}; padding:8px 12px; text-align:center;">${index + 1}</td>
-      <td style="border-bottom:1px solid #ccc; border-right:${borderThin}; padding:8px 12px; font-weight:500;">${item.quotationCode || ""}</td>
-      <td style="border-bottom:1px solid #ccc; border-right:${borderThin}; padding:8px 12px; text-align:right;">${formatCurrency(item.finalPrice)}</td>
-      <td style="border-bottom:1px solid #ccc; border-right:${borderThin}; padding:8px 12px; text-align:center;">${item.quantity}</td>
-      <td style="border-bottom:1px solid #ccc; padding:8px 12px; text-align:right; font-weight:500;">${formatCurrency(item.total)}</td>
-    </tr>`
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:center;">${index + 1}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;font-weight:500;">${item.quotationName + "  (" + item.quotationCode + ")"}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:right;">${formatCurrency(item.finalPrice)}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:center;">${item.quantity}</td>
+      <td style="border-bottom:1px solid #ccc;padding:8px 12px;text-align:right;font-weight:500;">${formatCurrency(item.total)}</td>
+    </tr>`,
     )
     .join("");
 
   const page1 = `
     <div class="pdf-page">
-      <div style="height:100%; display:flex; flex-direction:column;">
-        <div style="border:${border}; flex:1; display:flex; flex-direction:column; padding:0;">
+      <div style="height:100%;display:flex;flex-direction:column;">
+        <div style="border:${border};flex:1;display:flex;flex-direction:column;padding:0;">
 
           ${companyHeader("Quotation")}
           ${clientInfoRow()}
 
           <!-- Summary Title -->
-          <div style="border-bottom:${border}; padding:8px 20px; text-align:center; font-weight:700; font-size:13px; background-color:#f9f9f9;">
+          <div style="border-bottom:${border};padding:8px 20px;text-align:center;font-weight:700;font-size:13px;background-color:#f9f9f9;">
             Quotation Summary
           </div>
 
-          <!-- Summary Table — flex:1 pushes bottom section down -->
+          <!-- Summary Table -->
           <div style="flex:1;">
-            <table style="width:100%; border-collapse:collapse; font-size:10px;">
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
               <thead>
                 <tr style="background-color:#f3f4f6;">
-                  <th style="border-bottom:${border}; border-right:${borderThin}; padding:8px 12px; text-align:center; font-weight:700; width:50px; font-size:9.5px;">Sr no</th>
-                  <th style="border-bottom:${border}; border-right:${borderThin}; padding:8px 12px; text-align:left; font-weight:700; font-size:9.5px;">Code</th>
-                  <th style="border-bottom:${border}; border-right:${borderThin}; padding:8px 12px; text-align:right; font-weight:700; font-size:9.5px;">Final Price</th>
-                  <th style="border-bottom:${border}; border-right:${borderThin}; padding:8px 12px; text-align:center; font-weight:700; width:60px; font-size:9.5px;">Units</th>
-                  <th style="border-bottom:${border}; padding:8px 12px; text-align:right; font-weight:700; font-size:9.5px;">Total</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:center;font-weight:700;width:50px;font-size:9.5px;">Sr no</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:left;font-weight:700;font-size:9.5px;">Code</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:right;font-weight:700;font-size:9.5px;">Final Price</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:center;font-weight:700;width:60px;font-size:9.5px;">Units</th>
+                  <th style="border-bottom:${border};padding:8px 12px;text-align:right;font-weight:700;font-size:9.5px;">Total</th>
                 </tr>
               </thead>
               <tbody>
                 ${summaryRows}
                 <tr style="background-color:#f9f9f9;">
-                  <td colspan="4" style="border-top:${border}; border-right:${borderThin}; padding:10px 12px; text-align:center; font-weight:800; font-size:11px;">Grand Total</td>
-                  <td style="border-top:${border}; padding:10px 12px; text-align:right; font-weight:800; font-size:11px;">${formatCurrency(project.grandTotal)}</td>
+                  <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:800;font-size:11px;">Grand Total</td>
+                  <td style="border-top:${border};padding:10px 12px;text-align:right;font-weight:800;font-size:11px;">${formatCurrency(project.grandTotal)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <!-- Bottom: Sales Manager + GST -->
-          <div style="border-top:${border}; display:flex;">
-            <div style="flex:1; padding:12px 20px; border-right:${border}; display:flex; flex-direction:column; justify-content:flex-end;">
-              <div style="font-size:9px; color:#666;">Sales Manager</div>
-              <div style="font-size:11px; font-weight:600; margin-top:2px;">${salesPersonName}</div>
+          <div style="border-top:${border};display:flex;">
+            <div style="flex:1;padding:12px 20px;border-right:${border};display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="font-size:9px;color:#666;">Sales Manager</div>
+              <div style="font-size:11px;font-weight:600;margin-top:2px;">${salesPersonName}</div>
             </div>
             <div style="width:260px;">
-              <table style="width:100%; border-collapse:collapse; font-size:10px;">
+              <table style="width:100%;border-collapse:collapse;font-size:10px;">
                 <tbody>
                   <tr>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc; font-weight:500;">Grand Total</td>
-                    <td style="padding:6px 8px; border-bottom:1px solid #ccc; text-align:center; width:45px;"></td>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc; text-align:right; font-weight:500;">${formatCurrency(project.grandTotal)}</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;font-weight:500;">Grand Total</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;width:45px;"></td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;font-weight:500;">${formatCurrency(project.grandTotal)}</td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc;">IGST</td>
-                    <td style="padding:6px 8px; border-bottom:1px solid #ccc; text-align:center;">0%</td>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc; text-align:right;">0</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">IGST</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">0%</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">0</td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc;">CGST</td>
-                    <td style="padding:6px 8px; border-bottom:1px solid #ccc; text-align:center;">9%</td>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc; text-align:right;">${formatCurrency(project.cgst)}</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">CGST</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">9%</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">${formatCurrency(project.cgst)}</td>
                   </tr>
                   <tr>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc;">SGST</td>
-                    <td style="padding:6px 8px; border-bottom:1px solid #ccc; text-align:center;">9%</td>
-                    <td style="padding:6px 12px; border-bottom:1px solid #ccc; text-align:right;">${formatCurrency(project.sgst)}</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">SGST</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">9%</td>
+                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">${formatCurrency(project.sgst)}</td>
                   </tr>
                   <tr style="background-color:#f3f4f6;">
-                    <td style="padding:8px 12px; font-weight:800; font-size:10px;">Grand Total With GST</td>
-                    <td style="padding:8px 8px; text-align:center; font-weight:700;">18%</td>
-                    <td style="padding:8px 12px; text-align:right; font-weight:800; font-size:11px;">${formatCurrency(project.grandTotalWithGst)}</td>
+                    <td style="padding:8px 12px;font-weight:800;font-size:10px;">Grand Total With GST</td>
+                    <td style="padding:8px 8px;text-align:center;font-weight:700;">18%</td>
+                    <td style="padding:8px 12px;text-align:right;font-weight:800;font-size:11px;">${formatCurrency(project.grandTotalWithGst)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -244,24 +270,18 @@ function buildProjectHTML(project: any): string {
 
   const productPages = items
     .map((item: any, index: number) => {
-      const imageSrc = item.images?.[0]
-        ? resolveImageSrc(item.images[0])
-        : "";
+      const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
 
       // ── Notes ──
       let notesHtml = `<div>1. ${item.quotationName || ""}</div>`;
       if (item.woodName) {
-        notesHtml += `<div>2. Base frame &amp; support <span style="display:inline-block; width:4px;"></span>: ${item.woodName} with ${item.polishName || ""}</div>`;
+        notesHtml += `<div>2. Base frame &amp; support <span style="display:inline-block;width:4px;"></span>: ${item.woodName} with ${item.polishName || ""}</div>`;
       }
       if (item.fabricName) {
         const n = item.woodName ? "3" : "2";
-        notesHtml += `<div>${n}. Upholstery <span style="display:inline-block; width:4px;"></span>: ${item.fabricName}</div>`;
+        notesHtml += `<div>${n}. Upholstery <span style="display:inline-block;width:4px;"></span>: ${item.fabricName}</div>`;
       }
-      if (
-        item.notes?.length > 0 &&
-        !item.woodName &&
-        !item.fabricName
-      ) {
+      if (item.notes?.length > 0 && !item.woodName && !item.fabricName) {
         item.notes.forEach((note: string, i: number) => {
           notesHtml += `<div>${i + 1}. ${note}</div>`;
         });
@@ -270,153 +290,156 @@ function buildProjectHTML(project: any): string {
       // ── Description rows ──
       let descRows = `
         <tr>
-          <td colspan="2" style="padding:5px 12px; border-bottom:${borderThin}; font-weight:600; font-size:10px;">Description</td>
+          <td colspan="2" style="padding:5px 12px;border-bottom:${borderThin};font-weight:600;font-size:10px;">Description</td>
         </tr>`;
 
       if (item.woodName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555; width:100px;">Wood</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">: ${item.woodName}</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;width:100px;">Wood</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.woodName}</td>
         </tr>`;
       }
       if (item.polishName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555;">Polish</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">: ${item.polishName}</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Polish</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.polishName}</td>
         </tr>`;
       }
       if (item.fabricName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555;">Fabric</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">: ${item.fabricName}</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Fabric</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.fabricName}</td>
         </tr>`;
       }
       if (!item.woodName && !item.polishName && !item.fabricName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555;">Length</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">:</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Length</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">${
+            (item as any).length ? (item as any).length + " (mm)" : "—"
+          }</td>
         </tr>
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555;">Width</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">:</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Width</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">${
+            (item as any).width ? (item as any).width + " (mm)" : "—"
+          }</td>
         </tr>
         <tr>
-          <td style="padding:4px 12px; border-bottom:${borderThin}; color:#555;">Height</td>
-          <td style="padding:4px 12px; border-bottom:${borderThin};">:</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Special Note</td>
+          <td style="padding:4px 12px;border-bottom:${borderThin};">${item.specialNote || "—"}</td>
         </tr>`;
       }
       descRows += `
         <tr>
-          <td colspan="2" style="padding:8px 12px; vertical-align:bottom;">
-            <div style="font-size:9px; color:#666; margin-top:4px;">Sales Manager</div>
-            <div style="font-weight:600; font-size:10px;">${salesPersonName}</div>
+          <td colspan="2" style="padding:8px 12px;vertical-align:bottom;">
+            <div style="font-size:9px;color:#666;margin-top:4px;">Sales Manager</div>
+            <div style="font-weight:600;font-size:10px;">${salesPersonName}</div>
           </td>
         </tr>`;
 
       // ── Image HTML ──
       const imageHtml = imageSrc
-        ? `<img src="${imageSrc}" alt="${item.productName || ""}" style="max-height:400px; max-width:100%; width:auto; height:auto; object-fit:contain; display:block;" />`
-        : `<div style="color:#999; font-size:14px; text-align:center; padding:40px;">No Image Available</div>`;
+        ? `<img src="${imageSrc}" alt="${item.productName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
+        : `<div style="color:#999;font-size:14px;text-align:center;padding:40px;">No Image Available</div>`;
 
       return `
       <div class="pdf-page">
-        <div style="height:100%; display:flex; flex-direction:column;">
-          <div style="border:${border}; flex:1; display:flex; flex-direction:column;">
+        <div style="height:100%;display:flex;flex-direction:column;">
+          <div style="border:${border};flex:1;display:flex;flex-direction:column;">
 
             ${companyHeader("Quotation")}
 
             <!-- Notes -->
-            <div style="border-bottom:${border}; padding:10px 20px; font-size:9.5px; line-height:1.7;">
-              <div style="font-weight:700; margin-bottom:4px;">Notes:</div>
+            <div style="border-bottom:${border};padding:10px 20px;font-size:9.5px;line-height:1.7;">
+              <div style="font-weight:700;margin-bottom:4px;">Notes:</div>
               ${notesHtml}
             </div>
 
             ${clientInfoRow()}
 
             <!-- Reference Image Header + CODE -->
-            <div style="display:flex; border-bottom:${borderThin};">
-              <div style="flex:1; padding:6px 12px; border-right:${borderThin}; font-weight:600; font-size:10px; background-color:#f9f9f9;">
-                Reference Image
+            <div style="display:flex;border-bottom:${borderThin};">
+              <div style="flex:1;padding:6px 12px;border-right:${borderThin};font-weight:600;font-size:10px;background-color:#f9f9f9;">
+                ${item.quotationName || "-"}
               </div>
               <div style="display:flex;">
-                <div style="padding:6px 12px; border-right:${borderThin}; font-weight:700; font-size:10px; background-color:#f9f9f9;">CODE</div>
-                <div style="padding:6px 16px; font-weight:600; font-size:10px;">${item.quotationCode || ""}</div>
+                <div style="padding:6px 12px;border-right:${borderThin};font-weight:700;font-size:10px;background-color:#f9f9f9;">CODE</div>
+                <div style="padding:6px 16px;font-weight:600;font-size:10px;">${item.quotationCode || ""}</div>
               </div>
             </div>
 
             <!-- Large Image -->
-            <div style="display:flex; align-items:center; justify-content:center; border-bottom:${borderThin};">
+            <div style="display:flex;align-items:center;justify-content:center;border-bottom:${borderThin};">
               ${imageHtml}
             </div>
 
             <!-- Bottom: Description + Pricing -->
-            <div style="display:flex; border-bottom:${border};">
+            <div style="display:flex;border-bottom:${border};">
 
               <!-- Left — Description -->
-              <div style="width:50%; border-right:${border}; font-size:10px;">
-                <table style="width:100%; border-collapse:collapse;">
+              <div style="width:50%;border-right:${border};font-size:10px;">
+                <table style="width:100%;border-collapse:collapse;">
                   <tbody>${descRows}</tbody>
                 </table>
               </div>
 
-              <!-- Right — Pricing (matches FE exactly) -->
-              <div style="width:50%; font-size:10px;">
-                <table style="width:100%; border-collapse:collapse;">
+              <!-- Right — Pricing -->
+              <div style="width:50%;font-size:10px;">
+                <table style="width:100%;border-collapse:collapse;">
                   <tbody>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">Price</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin}; text-align:center; width:40px;"></td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">${formatCurrency(item.basePrice)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">Price</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;width:40px;"></td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.basePrice)}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">Discount</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin}; text-align:center;">${Number(item.discountPercent)}%</td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">${formatCurrency(item.discountAmount)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">Discount</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">${Number(item.discountPercent)}%</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.discountAmount)}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">Final Price</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">${formatCurrency(item.finalPrice)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">Final Price</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.finalPrice)}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">Units</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">${item.quantity}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">Units</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${item.quantity}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; font-weight:600;">Total</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right; font-weight:600;">${formatCurrency(item.total)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};font-weight:600;">Total</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(item.total)}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">IGST</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin}; text-align:center;">0%</td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">0</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">IGST</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">0%</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">0</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; border-bottom:${borderThin};">CGST</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin}; text-align:center;">9%</td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right;">${formatCurrency(item.cgst)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};">CGST</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">9%</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.cgst)}</td>
                     </tr>
                     <tr style="background-color:#f9f9f9;">
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; font-weight:700;">Total With GST</td>
-                      <td style="padding:5px 8px; border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px; border-bottom:${borderThin}; text-align:right; font-weight:700;">${formatCurrency(item.totalWithGst)}</td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};font-weight:700;">Total With GST</td>
+                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
+                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;font-weight:700;">${formatCurrency(item.totalWithGst)}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px; text-align:center;" colspan="2">Quotation</td>
-                      <td style="padding:5px 12px; text-align:right; font-weight:700; font-size:13px;">${index + 1}</td>
+                      <td style="padding:5px 12px;text-align:center;" colspan="2">Quotation</td>
+                      <td style="padding:5px 12px;text-align:right;font-weight:700;font-size:13px;">${index + 1}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- Footer (no border-top — matches FE product page) -->
             ${productPageFooter()}
 
           </div>
@@ -425,32 +448,32 @@ function buildProjectHTML(project: any): string {
     })
     .join("");
 
-  // ═══ TERMS & CONDITIONS PAGE ════════════════════════════
+  // ═══ TERMS & CONDITIONS PAGE (matches FE exactly) ══════
 
   const termsPage = `
     <div class="pdf-page">
-      <div style="height:100%; display:flex; flex-direction:column;">
-        <div style="border:${border}; flex:1; display:flex; flex-direction:column;">
+      <div style="height:100%;display:flex;flex-direction:column;">
+        <div style="border:${border};flex:1;display:flex;flex-direction:column;">
 
-          <!-- Header -->
-          <div style="display:flex; border-bottom:${border};">
-            <div style="flex:1; padding:16px 20px; border-right:${border};">
-              <div style="font-size:28px; font-weight:800; letter-spacing:-1px; line-height:1;">
-                ecstatics<span>.</span>
+          <!-- Header — matches FE T&C header exactly -->
+          <div style="display:flex;border-bottom:${border};">
+            <div style="flex:1;padding:12px 20px;border-right:${border};align-items:center;">
+              <div style="flex-shrink:0;">
+                ${logoHtml}
               </div>
-              <div style="font-size:9px; margin-top:6px; color:#333; line-height:1.5;">
-                <div>Ecstatics Spaces India Pvt. Ltd.</div>
+              <div style="font-size:9px;color:#333;line-height:1.5;">
+                <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
               </div>
             </div>
-            <div style="width:200px; display:flex; align-items:center; justify-content:center;">
-              <div style="font-size:16px; font-weight:700;">Terms &amp; Conditions</div>
+            <div style="width:200px;display:flex;align-items:center;justify-content:center;">
+              <div style="font-size:16px;font-weight:700;">Terms &amp; Conditions</div>
             </div>
           </div>
 
           <!-- Terms Content -->
-          <div style="flex:1; padding:20px 24px; font-size:10px; line-height:1.8; color:#222;">
-            <ol style="padding-left:18px; margin:0;">
-              ${termsAndConditions.map((t) => `<li style="margin-bottom:8px; padding-left:4px;">${t}</li>`).join("")}
+          <div style="flex:1;padding:20px 24px;font-size:10px;line-height:1.8;color:#222;">
+            <ol style="padding-left:18px;margin:0;">
+              ${termsAndConditions.map((t) => `<li style="margin-bottom:8px;padding-left:4px;">${t}</li>`).join("")}
             </ol>
           </div>
 
@@ -468,7 +491,6 @@ function buildProjectHTML(project: any): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* ─── Reset — matches FE global reset ─── */
     *, *::before, *::after {
       margin: 0;
       padding: 0;
@@ -487,19 +509,18 @@ function buildProjectHTML(project: any): string {
       print-color-adjust: exact !important;
     }
 
-    /* ─── Page setup — ONLY source of spacing ─── */
     @page {
       size: A4;
-      margin: 0;  /* No page margin — padding handles it */
+      margin: 0;
     }
 
     .pdf-page {
       width: 210mm;
       height: 297mm;
-      padding: 12mm;            /* ← matches FE screen preview */
+      padding: 12mm;
       margin: 0;
       overflow: hidden;
-      box-sizing: border-box;   /* ← padding included in 210x297 */
+      box-sizing: border-box;
       page-break-after: always;
       page-break-inside: avoid;
       position: relative;
@@ -509,14 +530,12 @@ function buildProjectHTML(project: any): string {
       page-break-after: auto;
     }
 
-    /* ─── Image safety ─── */
     img {
       max-width: 100%;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
 
-    /* ─── Table reset ─── */
     table {
       border-spacing: 0;
     }
@@ -564,10 +583,9 @@ export async function generateProjectPDF(project: any): Promise<string> {
     const browser = await getBrowser();
     page = await browser.newPage();
 
-    // Set viewport to match A4 at 96 DPI
     await page.setViewport({
-      width: 794,   // 210mm at 96 DPI
-      height: 1123, // 297mm at 96 DPI
+      width: 794,
+      height: 1123,
       deviceScaleFactor: 1,
     });
 
@@ -576,7 +594,6 @@ export async function generateProjectPDF(project: any): Promise<string> {
       timeout: 30_000,
     });
 
-    // Wait for web-fonts to load
     await page.evaluateHandle("document.fonts.ready");
 
     await page.pdf({
@@ -584,7 +601,6 @@ export async function generateProjectPDF(project: any): Promise<string> {
       format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
-      // ★ margin: 0 — CSS padding on .pdf-page is the ONLY spacing
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 

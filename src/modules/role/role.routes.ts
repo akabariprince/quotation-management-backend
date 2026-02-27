@@ -18,4 +18,4 @@ router.post('/', requirePermission(PERMISSIONS.ROLE_CREATE), validate(createRole
 router.put('/:id', requirePermission(PERMISSIONS.ROLE_EDIT), validate(updateRoleSchema), roleController.update);
 router.delete('/:id', requirePermission(PERMISSIONS.ROLE_DELETE), roleController.delete);
 
-export default router;
+export default router;  

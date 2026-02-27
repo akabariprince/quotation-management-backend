@@ -1,12 +1,17 @@
 // src/modules/role/role.validation.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 export const createRoleSchema = z.object({
-  name: z.string().min(1).max(50)
-    .regex(/^[a-z_]+$/, 'Lowercase letters and underscores only'),
+  name: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z_]+$/, "Lowercase letters and underscores only"),
   displayName: z.string().min(1).max(100),
   description: z.string().optional().nullable(),
-  permissions: z.array(z.string()).min(1, 'At least one permission required'),
+  permissions: z.array(z.string()).min(1, "At least one permission required"),
+  discountMin: z.number().min(0).max(100).optional().default(0),
+  discountMax: z.number().min(0).max(100).optional().default(100),
   isActive: z.boolean().optional().default(true),
 });
 

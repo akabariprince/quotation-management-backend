@@ -37,6 +37,8 @@ export class AuthService {
         name: user.role.name,
         displayName: user.role.displayName,
         permissions: user.role.permissions,
+        discountMin: Number(user.role.discountMin) || 0,
+        discountMax: Number(user.role.discountMax) || 100,
       },
     };
   }
@@ -214,7 +216,14 @@ export class AuthService {
         {
           model: Role,
           as: "role",
-          attributes: ["id", "name", "displayName", "permissions"],
+          attributes: [
+            "id",
+            "name",
+            "displayName",
+            "permissions",
+            "discountMin",
+            "discountMax",
+          ],
         },
       ],
     });

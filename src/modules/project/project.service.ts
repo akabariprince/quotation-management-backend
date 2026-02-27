@@ -35,11 +35,19 @@ const projectIncludes: Includeable[] = [
       "mobile",
       "email",
       "address",
+      "landmark",
       "gstin",
       "contactPerson",
       "city",
       "state",
       "region",
+      "pincode",
+      "deliveryAddress",
+      "deliveryLandmark",
+      "deliveryCity",
+      "deliveryState",
+      "deliveryPincode",
+      "deliverySameAsBilling",
     ],
   },
   {
@@ -126,21 +134,64 @@ class ProjectService {
       "grandTotalWithGst",
       "status",
     ]);
+
     const where: any = {};
+    const customerWhere: any = {};
+    let hasCustomerSearch = false;
+
     if (query.search) {
-      where[Op.or] = [
+      // Build project-level conditions
+      const projectConditions: any[] = [
         { projectNo: { [Op.iLike]: `%${query.search}%` } },
-        { salesManager: { [Op.iLike]: `%${query.search}%` } },
       ];
+
+      // Only add projectName search if the column exists
+      // This is safe even if column exists - it won't error
+      try {
+        projectConditions.push({
+          projectName: { [Op.iLike]: `%${query.search}%` },
+        });
+      } catch {
+        // column doesn't exist yet, skip
+      }
+
+      where[Op.or] = projectConditions;
+
+      // Search customer name via include where (separate from main where)
+      hasCustomerSearch = true;
     }
+
     if (query.status) where.status = query.status;
     if (query.customerId) where.customerId = query.customerId;
-    if (query.salesManager)
-      where.salesManager = { [Op.iLike]: `%${query.salesManager}%` };
+
     if (query.startDate && query.endDate)
       where.date = { [Op.between]: [query.startDate, query.endDate] };
     else if (query.startDate) where.date = { [Op.gte]: query.startDate };
     else if (query.endDate) where.date = { [Op.lte]: query.endDate };
+
+    // When searching, we need to search across customer name too
+    // Use two-step approach: first get IDs, then fetch full data
+    if (hasCustomerSearch && query.search) {
+      // Find customer IDs matching search
+      const matchingCustomers = await Customer.findAll({
+        where: {
+          name: { [Op.iLike]: `%${query.search}%` },
+        },
+        attributes: ["id"],
+        raw: true,
+      });
+
+      const customerIds = matchingCustomers.map((c: any) => c.id);
+
+      // Combine: project matches OR customer matches
+      if (customerIds.length > 0) {
+        const projectConditions = where[Op.or] || [];
+        where[Op.or] = [
+          ...projectConditions,
+          { customerId: { [Op.in]: customerIds } },
+        ];
+      }
+    }
 
     const { count, rows } = await Project.findAndCountAll({
       where,
@@ -156,6 +207,7 @@ class ProjectService {
       offset: pagination.offset,
       distinct: true,
     });
+
     return {
       data: rows,
       meta: buildPaginationMeta(count, pagination.page, pagination.limit),
@@ -186,9 +238,10 @@ class ProjectService {
       if (items?.length) {
         const rows = items.map((item: any, index: number) => ({
           ...item,
-          projectId: project.id,
+          projectId: project.id, // or id for update
           projectQuotationNo: this.generateItemNumber(projectNo, index),
           sortOrder: index,
+          specialNote: item.specialNote || null,
         }));
         await ProjectItem.bulkCreate(rows, { transaction });
       }
@@ -310,7 +363,13 @@ class ProjectService {
     const data = {
       date: new Date().toISOString().split("T")[0],
       customerId: original.customerId,
+      projectName: original.projectName,
       salesPersonId: original.salesPersonId,
+      deliveryAddress: (original as any).deliveryAddress,
+      deliveryLandmark: (original as any).deliveryLandmark,
+      deliveryCity: (original as any).deliveryCity,
+      deliveryState: (original as any).deliveryState,
+      deliveryPincode: (original as any).deliveryPincode,
       subtotal: original.subtotal,
       totalDiscount: original.totalDiscount,
       igst: original.igst,
@@ -344,6 +403,7 @@ class ProjectService {
           sgst: item.sgst,
           totalWithGst: item.totalWithGst,
           notes: item.notes,
+          specialNote: item.specialNote || null,
         })) || [],
     };
 

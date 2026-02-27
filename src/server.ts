@@ -37,7 +37,7 @@ const startServer = async () => {
     }
 
     // Run seeder (only seeds if tables are empty)
-    await seedDatabase();
+    // await seedDatabase();
 
     // Start server
     app.listen(env.port, () => {
