@@ -13,6 +13,7 @@ export const createRoleSchema = z.object({
   discountMin: z.number().min(0).max(100).optional().default(0),
   discountMax: z.number().min(0).max(100).optional().default(100),
   isActive: z.boolean().optional().default(true),
+  requireOtpForMaster: z.boolean().optional().default(true),
 });
 
 export const updateRoleSchema = z.object({
@@ -20,4 +21,5 @@ export const updateRoleSchema = z.object({
   description: z.string().optional().nullable(),
   permissions: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
+  requireOtpForMaster: z.boolean().optional(),
 });

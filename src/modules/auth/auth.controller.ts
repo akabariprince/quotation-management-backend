@@ -1,45 +1,45 @@
 // src/modules/auth/auth.controller.ts
-import { Request, Response } from 'express';
-import { authService } from './auth.service';
-import { ApiResponse } from '../../utils/ApiResponse';
-import { asyncHandler } from '../../utils/asyncHandler';
-import { AuthRequest } from '../../types';
+import { Request, Response } from "express";
+import { authService } from "./auth.service";
+import { ApiResponse } from "../../utils/ApiResponse";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { AuthRequest } from "../../types";
 
 export class AuthController {
-  
   login = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
     const result = await authService.login(email, password);
-    res.json(ApiResponse.success(result, 'Login successful'));
+    res.json(ApiResponse.success(result, "Login successful"));
   });
 
   refreshToken = asyncHandler(async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
     const result = await authService.refreshToken(refreshToken);
-    res.json(ApiResponse.success(result, 'Token refreshed successfully'));
+    res.json(ApiResponse.success(result, "Token refreshed successfully"));
   });
 
   logout = asyncHandler(async (req: AuthRequest, res: Response) => {
     await authService.logout(req.user!.userId);
-    res.json(ApiResponse.success(null, 'Logged out successfully'));
+    res.json(ApiResponse.success(null, "Logged out successfully"));
   });
-
   requestOTP = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { email, type, entityId, entityType } = req.body;
+    const { email, type, entityId, entityType, entityName, requestedBy } = req.body;
+
     const result = await authService.requestOTP(
       email,
       type,
-      req.user?.userId,
+      requestedBy,
       entityId,
-      entityType
+      entityType,
+      entityName
     );
-    res.json(ApiResponse.success(result, 'OTP sent successfully'));
+    res.json(ApiResponse.success(result, "OTP sent successfully"));
   });
 
   verifyOTP = asyncHandler(async (req: Request, res: Response) => {
     const { email, otp, otpLogId } = req.body;
     const result = await authService.verifyOTPCode(email, otp, otpLogId);
-    res.json(ApiResponse.success(result, 'OTP verified successfully'));
+    res.json(ApiResponse.success(result, "OTP verified successfully"));
   });
 
   getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {

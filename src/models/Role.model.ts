@@ -10,6 +10,7 @@ interface RoleAttributes {
   permissions: string[];
   discountMin: number;
   discountMax: number;
+  requireOtpForMaster: boolean;
   isActive: boolean;
   isSystem: boolean;
   createdAt: Date;
@@ -17,24 +18,25 @@ interface RoleAttributes {
   deletedAt: Date | null;
 }
 
-interface RoleCreationAttributes extends Optional<
-  RoleAttributes,
-  | "id"
-  | "description"
-  | "permissions"
-  | "discountMin"
-  | "discountMax"
-  | "isActive"
-  | "isSystem"
-  | "createdAt"
-  | "updatedAt"
-  | "deletedAt"
-> {}
+interface RoleCreationAttributes
+  extends Optional<
+    RoleAttributes,
+    | "id"
+    | "description"
+    | "permissions"
+    | "discountMin"
+    | "discountMax"
+    | "requireOtpForMaster"
+    | "isActive"
+    | "isSystem"
+    | "createdAt"
+    | "updatedAt"
+    | "deletedAt"
+  > { }
 
 class Role
   extends Model<RoleAttributes, RoleCreationAttributes>
-  implements RoleAttributes
-{
+  implements RoleAttributes {
   public id!: string;
   public name!: string;
   public displayName!: string;
@@ -42,6 +44,7 @@ class Role
   public permissions!: string[];
   public discountMin!: number;
   public discountMax!: number;
+  public requireOtpForMaster!: boolean;
   public isActive!: boolean;
   public isSystem!: boolean;
   public createdAt!: Date;
@@ -87,6 +90,12 @@ Role.init(
       defaultValue: 100,
       field: "discount_max",
     },
+    requireOtpForMaster: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      field: "require_otp_for_master",
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -109,7 +118,7 @@ Role.init(
     timestamps: true,
     paranoid: true,
     underscored: true,
-  },
+  }
 );
 
 export default Role;

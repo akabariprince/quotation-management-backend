@@ -39,6 +39,7 @@ export class AuthService {
         permissions: user.role.permissions,
         discountMin: Number(user.role.discountMin) || 0,
         discountMax: Number(user.role.discountMax) || 100,
+        requireOtpForMaster: user.role.requireOtpForMaster ?? true,
       },
     };
   }
@@ -79,7 +80,6 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const decoded = verifyRefreshToken(refreshToken);
-
       const user = await User.findOne({
         where: { id: decoded.userId, refreshToken, isActive: true },
         include: [{ model: Role, as: "role" }],
@@ -112,13 +112,16 @@ export class AuthService {
     requestedBy?: string,
     entityId?: string,
     entityType?: string,
+    entityName?: string
   ) {
     const recentOTP = await OTPLog.findOne({
       where: {
         email,
         type,
         createdAt: {
-          [Op.gte]: new Date(Date.now() - env.otp.resendCooldownSeconds * 1000),
+          [Op.gte]: new Date(
+            Date.now() - env.otp.resendCooldownSeconds * 1000
+          ),
         },
       },
       order: [["createdAt", "DESC"]],
@@ -126,7 +129,7 @@ export class AuthService {
 
     if (recentOTP) {
       throw ApiError.tooManyRequests(
-        `Please wait ${env.otp.resendCooldownSeconds} seconds before requesting a new OTP`,
+        `Please wait ${env.otp.resendCooldownSeconds} seconds before requesting a new OTP`
       );
     }
 
@@ -140,31 +143,40 @@ export class AuthService {
 
     if (recentAttempts >= env.otp.maxResend) {
       throw ApiError.tooManyRequests(
-        "Maximum OTP requests reached. Try again later.",
+        "Maximum OTP requests reached. Try again later."
       );
     }
 
     await OTPLog.update(
       { status: "expired" },
-      { where: { email, type, status: "pending" } },
+      { where: { email, type, status: "pending" } }
     );
 
     const otp = generateOTP();
     const otpHash = await hashOTP(otp);
-    const expiresAt = new Date(Date.now() + env.otp.expiryMinutes * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + env.otp.expiryMinutes * 60 * 1000
+    );
 
     const otpLog = await OTPLog.create({
       type,
       entityId: entityId || null,
       entityType: entityType || null,
+      entityName: entityName || null,
       email,
       otpHash,
       requestedBy: requestedBy || null,
       status: "pending",
+      attempts: 0,
+      maxAttempts: 5,
       expiresAt,
     });
 
-    const emailSent = await sendOTPEmail(email, otp, type.replace("_", " "));
+    const emailSent = await sendOTPEmail(
+      email,
+      otp,
+      type.replace("_", " ")
+    );
 
     await EmailLog.create({
       toEmail: email,
@@ -195,7 +207,7 @@ export class AuthService {
       throw ApiError.badRequest("OTP has expired");
     }
 
-    if (otpLog.attempts >= otpLog.maxAttempts) {
+    if (otpLog.maxAttempts > 0 && otpLog.attempts >= otpLog.maxAttempts) {
       await otpLog.update({ status: "expired" });
       throw ApiError.badRequest("Maximum OTP attempts exceeded");
     }
@@ -223,13 +235,13 @@ export class AuthService {
             "permissions",
             "discountMin",
             "discountMax",
+            "requireOtpForMaster",
           ],
         },
       ],
     });
 
     if (!user) throw ApiError.notFound("User not found");
-
     return this.buildUserResponse(user);
   }
 

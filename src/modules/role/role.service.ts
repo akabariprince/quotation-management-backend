@@ -83,7 +83,6 @@ class RoleService {
     if (role.isSystem && data.name && data.name !== role.name) {
       throw ApiError.badRequest("Cannot rename system roles");
     }
-
     if (data.permissions) {
       const invalidPerms = (data.permissions as string[]).filter(
         (p): p is string => !ALL_PERMISSIONS.includes(p as Permission),

@@ -5,16 +5,12 @@ import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../utils/asyncHandler";
 
 class OTPController {
-  // ─── List all OTP logs (admin) ────────────────────────────────────────
-
   getAll = asyncHandler(async (req: Request, res: Response) => {
     const result = await otpService.findAll(req.query);
     res.json(
-      ApiResponse.success(result.data, "OTP logs fetched", 200, result.meta),
+      ApiResponse.success(result.data, "OTP logs fetched", 200, result.meta)
     );
   });
-
-  // ─── Get pending approvals (admin) ────────────────────────────────────
 
   getPendingApprovals = asyncHandler(async (req: Request, res: Response) => {
     const result = await otpService.getPendingApprovals(req.query);
@@ -23,12 +19,15 @@ class OTPController {
         result.data,
         "Pending approvals fetched",
         200,
-        result.meta,
-      ),
+        result.meta
+      )
     );
   });
 
-  // ─── Approve a pending OTP (admin) ────────────────────────────────────
+  getStats = asyncHandler(async (_req: Request, res: Response) => {
+    const stats = await otpService.getStats();
+    res.json(ApiResponse.success(stats, "Stats fetched"));
+  });
 
   approve = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -45,18 +44,38 @@ class OTPController {
     res.json(ApiResponse.success(result, "OTP approved successfully"));
   });
 
-  // ─── Reject a pending OTP (admin) ─────────────────────────────────────
+  directApprove = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const adminUser = (req as any).user;
+    const adminUserId = adminUser?.id || adminUser?.userId;
+    // Verify admin role
+    if (adminUser?.roleName !== "admin") {
+      return res
+        .status(403)
+        .json(
+          ApiResponse.error(
+            "Only admin users can directly approve without OTP",
+            403
+          )
+        );
+    }
+
+    const result = await otpService.directApprove(id as string, adminUserId);
+    res.json(ApiResponse.success(result, "Approved directly by admin"));
+  });
 
   reject = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { reason } = req.body;
     const userId = (req as any).user?.id || (req as any).user?.userId;
 
-    const result = await otpService.rejectOTP(id as string, reason, userId);
+    const result = await otpService.rejectOTP(
+      id as string,
+      reason || "",
+      userId
+    );
     res.json(ApiResponse.success(result, "OTP rejected"));
   });
-
-  // ─── Resend OTP for existing log (admin) ──────────────────────────────
 
   resend = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;

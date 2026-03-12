@@ -26,15 +26,15 @@ const startServer = async () => {
     //
     // ============================================================
 
-    if (env.isDevelopment) {
-      // ALTER mode: auto-updates columns, adds new ones, adjusts types
-      await sequelize.sync({ alter: true });
-      logger.info('✅ Database synced (alter mode - development)');
-    } else {
-      // Production: only creates missing tables, never alters existing
-      await sequelize.sync();
-      logger.info('✅ Database synced (safe mode - production)');
-    }
+    // if (env.isDevelopment) {
+    // ALTER mode: auto-updates columns, adds new ones, adjusts types
+    await sequelize.sync({ alter: true });
+    logger.info('✅ Database synced (alter mode - development)');
+    // } else {
+    //   // Production: only creates missing tables, never alters existing
+    //   await sequelize.sync();
+    //   logger.info('✅ Database synced (safe mode - production)');
+    // }
 
     // Run seeder (only seeds if tables are empty)
     // await seedDatabase();
