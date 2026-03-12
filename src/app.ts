@@ -26,6 +26,8 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import otpRoutes from './modules/otp/otp.routes';
 import emailLogRoutes from './modules/emailLog/emailLog.routes';
 import reportsRoutes from './modules/reports/reports.routes';
+import categoryNoRoutes from './modules/categoryNo/categoryNo.routes';
+import variantRoutes from './modules/variant/variant.routes';
 
 const app = express();
 
@@ -85,7 +87,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/otp-logs', otpRoutes);
 app.use('/api/email-logs', emailLogRoutes);
-
+app.use('/api/category-nos', categoryNoRoutes);
+app.use('/api/variants', variantRoutes);
 
 // Static file serving for uploads
 app.use(

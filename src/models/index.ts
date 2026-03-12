@@ -14,7 +14,8 @@ import Project from "./Project.model";
 import ProjectItem from "./ProjectItem.model";
 import OTPLog from "./OTPLog.model";
 import EmailLog from "./EmailLog.model";
-
+import CategoryNo from "./CategoryNo.model";
+import Variant from "./Variant.model";
 // Role -> User
 Role.hasMany(User, { foreignKey: "roleId", as: "users" });
 User.belongsTo(Role, { foreignKey: "roleId", as: "role" });
@@ -121,7 +122,20 @@ OTPLog.belongsTo(User, { foreignKey: "approvedBy", as: "approver" });
 
 // EmailLog -> User
 EmailLog.belongsTo(User, { foreignKey: "sentBy", as: "sender" });
+// CategoryNo <-> Category
+Category.hasMany(CategoryNo, { as: "categoryNos", foreignKey: "categoryId" });
+CategoryNo.belongsTo(Category, { as: "category", foreignKey: "categoryId" });
 
+// Quotation <-> CategoryNo
+Quotation.belongsTo(CategoryNo, {
+  as: "categoryNo",
+  foreignKey: "categoryNoId",
+});
+CategoryNo.hasMany(Quotation, { as: "quotations", foreignKey: "categoryNoId" });
+
+// Quotation <-> Variant
+Quotation.belongsTo(Variant, { as: "variant", foreignKey: "variantId" });
+Variant.hasMany(Quotation, { as: "quotations", foreignKey: "variantId" });
 export {
   sequelize,
   Role,
@@ -138,4 +152,6 @@ export {
   ProjectItem,
   OTPLog,
   EmailLog,
+  CategoryNo,
+  Variant,
 };

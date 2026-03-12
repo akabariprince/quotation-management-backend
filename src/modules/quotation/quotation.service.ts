@@ -1,26 +1,23 @@
-import { BaseCrudService } from '../shared/baseCrud.service';
-import Quotation from '../../models/Quotation.model';
-import { Op, WhereOptions } from 'sequelize';
+import { BaseCrudService } from "../shared/baseCrud.service";
+import Quotation from "../../models/Quotation.model";
+import { Op, WhereOptions } from "sequelize";
 
 class QuotationService extends BaseCrudService<Quotation> {
   constructor() {
-    super(Quotation, 'Quotation');
+    super(Quotation, "Quotation");
   }
 
-  // Override findAll matching the base class signature exactly
-  async findAll(
-    query: any,
-    additionalWhere?: WhereOptions,
-    include?: any[]
-  ) {
+  async findAll(query: any, additionalWhere?: WhereOptions, include?: any[]) {
     const {
       page = 1,
       limit = 10,
       search,
-      sortBy = 'created_at',
-      sortOrder = 'DESC',
+      sortBy = "created_at",
+      sortOrder = "DESC",
       categoryId,
+      categoryNoId,
       quotationTypeId,
+      variantId,
       status,
     } = query;
 
@@ -35,28 +32,20 @@ class QuotationService extends BaseCrudService<Quotation> {
       ];
     }
 
-    if (categoryId) {
-      where.category_id = categoryId;
-    }
+    if (categoryId) where.category_id = categoryId;
+    if (categoryNoId) where.category_no_id = categoryNoId;
+    if (quotationTypeId) where.quotation_type_id = quotationTypeId;
+    if (variantId) where.variant_id = variantId;
+    if (status) where.status = status;
 
-    if (quotationTypeId) {
-      where.quotation_type_id = quotationTypeId;
-    }
-
-    if (status) {
-      where.status = status;
-    }
-
-    // Map camelCase sortBy to snake_case
     const sortFieldMap: Record<string, string> = {
-      name: 'name',
-      partCode: 'part_code',
-      basePrice: 'base_price',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      status: 'status',
+      name: "name",
+      partCode: "part_code",
+      basePrice: "base_price",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+      status: "status",
     };
-
     const actualSortBy = sortFieldMap[sortBy] || sortBy;
 
     const { rows, count } = await Quotation.findAndCountAll({

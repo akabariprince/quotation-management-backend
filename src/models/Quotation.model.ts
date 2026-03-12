@@ -6,8 +6,10 @@ interface QuotationAttributes {
   name: string;
   partCode: string;
   categoryId: string;
+  categoryNoId: string | null;
   quotationTypeId: string;
   quotationModelId: string | null;
+  variantId: string | null;
   woodId: string | null;
   polishId: string | null;
   fabricId: string | null;
@@ -29,7 +31,9 @@ interface QuotationCreationAttributes
   extends Optional<
     QuotationAttributes,
     | 'id'
+    | 'categoryNoId'
     | 'quotationModelId'
+    | 'variantId'
     | 'woodId'
     | 'polishId'
     | 'fabricId'
@@ -44,18 +48,19 @@ interface QuotationCreationAttributes
     | 'createdAt'
     | 'updatedAt'
     | 'deletedAt'
-  > {}
+  > { }
 
 class Quotation
   extends Model<QuotationAttributes, QuotationCreationAttributes>
-  implements QuotationAttributes
-{
+  implements QuotationAttributes {
   public id!: string;
   public name!: string;
   public partCode!: string;
   public categoryId!: string;
+  public categoryNoId!: string | null;
   public quotationTypeId!: string;
   public quotationModelId!: string | null;
+  public variantId!: string | null;
   public woodId!: string | null;
   public polishId!: string | null;
   public fabricId!: string | null;
@@ -94,6 +99,11 @@ Quotation.init(
       allowNull: false,
       field: 'category_id',
     },
+    categoryNoId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'category_no_id',
+    },
     quotationTypeId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -103,6 +113,11 @@ Quotation.init(
       type: DataTypes.UUID,
       allowNull: true,
       field: 'quotation_model_id',
+    },
+    variantId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'variant_id',
     },
     woodId: {
       type: DataTypes.UUID,
@@ -184,7 +199,7 @@ Quotation.init(
     timestamps: true,
     paranoid: true,
     underscored: true,
-  }
+  },
 );
 
 export default Quotation;

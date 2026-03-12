@@ -84,6 +84,38 @@ function resolveImageSrc(imagePath: string): string {
   return `${baseUrl}/uploads/${imagePath}`;
 }
 
+// ─── Price Calculation Helpers (matching FE logic) ───────
+function getPriceInclGst(item: any): number {
+  const basePrice = Number(item.basePrice) || 0;
+  const gstPercent = Number(item.gstPercent) || 18;
+  return basePrice + (basePrice * gstPercent) / 100;
+}
+
+function getAmount(item: any): number {
+  const basePrice = Number(item.basePrice) || 0;
+  const quantity = Number(item.quantity) || 1;
+  return basePrice * quantity;
+}
+
+function getGstAmount(item: any): number {
+  const gstPercent = Number(item.gstPercent) || 18;
+  const amount = getAmount(item);
+  return (amount * gstPercent) / 100;
+}
+
+function getDiscountAmount(item: any): number {
+  const discountPercent = Number(item.discountPercent) || 0;
+  const amount = getAmount(item);
+  return (amount * discountPercent) / 100;
+}
+
+function getTotalInclGst(item: any): number {
+  const amount = getAmount(item);
+  const gst = getGstAmount(item);
+  const discount = getDiscountAmount(item);
+  return amount + gst - discount;
+}
+
 // ─── Terms & Conditions ──────────────────────────────────
 const termsAndConditions = [
   "The quotation is valid for a period of 30 days from the date of this offer.",
@@ -114,60 +146,58 @@ function buildProjectHTML(project: any): string {
   const border = "1.5px solid #000";
   const borderThin = "1px solid #000";
 
-  // ── Logo HTML ──
+  // ── Logo HTML (height:70px matches FE) ──
   const logoHtml = LOGO_BASE64
-    ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:52px;width:auto;object-fit:contain;" />`
+    ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:70px;width:auto;object-fit:contain;" />`
     : `<div style="font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;">ecstatics<span>.</span></div>`;
 
-  // ── Company Header ──────────────────────────────────────
-  // ★ FE has display:flex COMMENTED OUT on inner div → logo & text stack vertically
-  const companyHeader = (rightLabel: string) => `
-    <div style="display:flex;border-bottom:${border};">
-      <div style="flex:1;padding:12px 20px;border-right:${border};align-items:center;">
+  // ── Company Header (no right panel — matches FE) ──
+  // font-size: 9→12px, padding 13px 20px
+  const companyHeader = () => `
+    <div style="border-bottom:${border};">
+      <div style="padding:13px 20px;">
         <div style="flex-shrink:0;">
           ${logoHtml}
         </div>
-        <div style="font-size:9px;color:#333;line-height:1.5;">
+        <div style="font-size:12px;color:#333;line-height:1.5;margin-top:2px;">
           <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
           <div>3120, Ganga Trueno, Airport Road,</div>
           <div>Viman Nagar, Pune</div>
           <div style="margin-top:2px;">GST No: 27AAFCE9942B1ZM</div>
         </div>
       </div>
-      <div style="width:160px;display:flex;align-items:center;justify-content:center;padding:16px;">
-        <div style="font-size:20px;font-weight:700;letter-spacing:0.5px;">${rightLabel}</div>
-      </div>
     </div>`;
 
   // ── Client Info Row ─────────────────────────────────────
+  // font-size: 10→13px, minWidth:95px, date width:170px, padding 11px 20px
   const clientInfoRow = () => `
     <div style="display:flex;border-bottom:${border};">
-      <div style="flex:1;padding:10px 20px;border-right:${border};font-size:10px;">
-        <div style="display:flex;gap:8px;margin-bottom:4px;">
-          <span style="color:#666;min-width:75px;">Client name</span>
+      <div style="flex:1;padding:11px 20px;border-right:${border};font-size:13px;">
+        <div style="display:flex;gap:8px;margin-bottom:5px;">
+          <span style="color:#666;min-width:95px;">Client name</span>
           <span style="font-weight:600;">${customer.name || ""}</span>
         </div>
         <div style="display:flex;gap:8px;">
-          <span style="color:#666;min-width:75px;">Contact No</span>
+          <span style="color:#666;min-width:95px;">Contact No</span>
           <span>${customer.mobile || ""}</span>
         </div>
       </div>
-      <div style="width:160px;padding:10px 20px;font-size:10px;text-align:right;">
-        <div style="color:#666;margin-bottom:4px;">Date</div>
+      <div style="width:170px;padding:11px 20px;font-size:13px;text-align:right;">
+        <div style="color:#666;margin-bottom:5px;">Date</div>
         <div style="font-weight:600;">${formatDate(project.date)}</div>
       </div>
     </div>`;
 
-  // ── Page Footer (with border-top) ──
+  // ── Page Footer ── font-size: 9→12px, padding 9px 20px
   const pageFooter = () => `
-    <div style="border-top:${border};padding:8px 20px;display:flex;justify-content:space-between;font-size:9px;color:#555;background-color:#fafafa;">
+    <div style="border-top:${border};padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
       <span>(+91) 7066 46 6060</span>
       <span>info@esipl.in</span>
     </div>`;
 
-  // ── Product Page Footer (NO border-top — matches FE) ───
+  // ── Product Page Footer (NO border-top) ── font-size: 9→12px, padding 9px 20px
   const productPageFooter = () => `
-    <div style="padding:8px 20px;display:flex;justify-content:space-between;font-size:9px;color:#555;background-color:#fafafa;">
+    <div style="padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
       <span>(+91) 7066 46 6060</span>
       <span>info@esipl.in</span>
     </div>`;
@@ -178,11 +208,11 @@ function buildProjectHTML(project: any): string {
     .map(
       (item: any, index: number) => `
     <tr>
-      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:center;">${index + 1}</td>
-      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;font-weight:500;">${item.quotationName + "  (" + item.quotationCode + ")"}</td>
-      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:right;">${formatCurrency(item.finalPrice)}</td>
-      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:8px 12px;text-align:center;">${item.quantity}</td>
-      <td style="border-bottom:1px solid #ccc;padding:8px 12px;text-align:right;font-weight:500;">${formatCurrency(item.total)}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:center;">${index + 1}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;font-weight:500;">${item.quotationName + "  (" + item.quotationCode + ")"}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:right;">${formatCurrency(getPriceInclGst(item))}</td>
+      <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:center;">${item.quantity}</td>
+      <td style="border-bottom:1px solid #ccc;padding:9px 12px;text-align:right;font-weight:500;">${formatCurrency(item.totalWithGst)}</td>
     </tr>`,
     )
     .join("");
@@ -192,72 +222,41 @@ function buildProjectHTML(project: any): string {
       <div style="height:100%;display:flex;flex-direction:column;">
         <div style="border:${border};flex:1;display:flex;flex-direction:column;padding:0;">
 
-          ${companyHeader("Quotation")}
+          ${companyHeader()}
           ${clientInfoRow()}
 
-          <!-- Summary Title -->
-          <div style="border-bottom:${border};padding:8px 20px;text-align:center;font-weight:700;font-size:13px;background-color:#f9f9f9;">
+          <!-- Summary Title: 13→16px, padding 9px -->
+          <div style="border-bottom:${border};padding:9px 20px;text-align:center;font-weight:700;font-size:16px;background-color:#f9f9f9;">
             Quotation Summary
           </div>
 
-          <!-- Summary Table -->
+          <!-- Summary Table: 10→13px -->
           <div style="flex:1;">
-            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
               <thead>
                 <tr style="background-color:#f3f4f6;">
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:center;font-weight:700;width:50px;font-size:9.5px;">Sr no</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:left;font-weight:700;font-size:9.5px;">Code</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:right;font-weight:700;font-size:9.5px;">Final Price</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:8px 12px;text-align:center;font-weight:700;width:60px;font-size:9.5px;">Units</th>
-                  <th style="border-bottom:${border};padding:8px 12px;text-align:right;font-weight:700;font-size:9.5px;">Total</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:center;font-weight:700;width:55px;font-size:12.5px;">Sr no</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:left;font-weight:700;font-size:12.5px;">Code</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:right;font-weight:700;font-size:12.5px;">Price <span style="font-weight:400;font-size:11px;color:#666;">(inc. of gst)</span></th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:center;font-weight:700;width:65px;font-size:12.5px;">Units</th>
+                  <th style="border-bottom:${border};padding:9px 12px;text-align:right;font-weight:700;font-size:12.5px;">Total <span style="font-weight:400;font-size:11px;color:#666;">(incl. of gst)</span></th>
                 </tr>
               </thead>
               <tbody>
                 ${summaryRows}
                 <tr style="background-color:#f9f9f9;">
-                  <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:800;font-size:11px;">Grand Total</td>
-                  <td style="border-top:${border};padding:10px 12px;text-align:right;font-weight:800;font-size:11px;">${formatCurrency(project.grandTotal)}</td>
+                  <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:11px 12px;text-align:center;font-weight:800;font-size:14px;">Grand Total <span style="font-weight:500;font-size:12px;color:#555;">(incl. of gst)</span></td>
+                  <td style="border-top:${border};padding:11px 12px;text-align:right;font-weight:800;font-size:14px;">${formatCurrency(project.grandTotalWithGst)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- Bottom: Sales Manager + GST -->
+          <!-- Bottom: Sales Manager + Grand Total -->
           <div style="border-top:${border};display:flex;">
-            <div style="flex:1;padding:12px 20px;border-right:${border};display:flex;flex-direction:column;justify-content:flex-end;">
-              <div style="font-size:9px;color:#666;">Sales Manager</div>
-              <div style="font-size:11px;font-weight:600;margin-top:2px;">${salesPersonName}</div>
-            </div>
-            <div style="width:260px;">
-              <table style="width:100%;border-collapse:collapse;font-size:10px;">
-                <tbody>
-                  <tr>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;font-weight:500;">Grand Total</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;width:45px;"></td>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;font-weight:500;">${formatCurrency(project.grandTotal)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">IGST</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">0%</td>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">0</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">CGST</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">9%</td>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">${formatCurrency(project.cgst)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;">SGST</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid #ccc;text-align:center;">9%</td>
-                    <td style="padding:6px 12px;border-bottom:1px solid #ccc;text-align:right;">${formatCurrency(project.sgst)}</td>
-                  </tr>
-                  <tr style="background-color:#f3f4f6;">
-                    <td style="padding:8px 12px;font-weight:800;font-size:10px;">Grand Total With GST</td>
-                    <td style="padding:8px 8px;text-align:center;font-weight:700;">18%</td>
-                    <td style="padding:8px 12px;text-align:right;font-weight:800;font-size:11px;">${formatCurrency(project.grandTotalWithGst)}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div style="flex:1;padding:13px 20px;border-right:${border};display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="font-size:12px;color:#666;">Sales Manager</div>
+              <div style="font-size:14px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
             </div>
           </div>
 
@@ -272,103 +271,96 @@ function buildProjectHTML(project: any): string {
     .map((item: any, index: number) => {
       const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
 
-      // ── Notes ──
-      let notesHtml = `<div>1. ${item.quotationName || ""}</div>`;
-      if (item.woodName) {
-        notesHtml += `<div>2. Base frame &amp; support <span style="display:inline-block;width:4px;"></span>: ${item.woodName} with ${item.polishName || ""}</div>`;
-      }
-      if (item.fabricName) {
-        const n = item.woodName ? "3" : "2";
-        notesHtml += `<div>${n}. Upholstery <span style="display:inline-block;width:4px;"></span>: ${item.fabricName}</div>`;
-      }
-      if (item.notes?.length > 0 && !item.woodName && !item.fabricName) {
-        item.notes.forEach((note: string, i: number) => {
-          notesHtml += `<div>${i + 1}. ${note}</div>`;
-        });
-      }
+      // ── Special Note (conditional) ── font-size: 9.5→12.5px, padding 9px
+      const specialNoteHtml = item.specialNote
+        ? `<div style="border-bottom:${border};padding:9px 20px;font-size:12.5px;line-height:1.7;">
+            <span style="font-weight:700;">Note: </span>
+            <span style="color:#333;">${item.specialNote}</span>
+          </div>`
+        : "";
 
-      // ── Description rows ──
+      // ── Description rows ── font-size: 10→13px, label width:110px, padding 5px 13px
       let descRows = `
         <tr>
-          <td colspan="2" style="padding:5px 12px;border-bottom:${borderThin};font-weight:600;font-size:10px;">Description</td>
+          <td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;">Description</td>
         </tr>`;
+
+      if (item.description) {
+        descRows += `
+        <tr>
+          <td colspan="2" style="padding:5px 13px;border-bottom:${borderThin};font-size:12px;color:#444;line-height:1.5;">${item.description}</td>
+        </tr>`;
+      }
 
       if (item.woodName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;width:100px;">Wood</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.woodName}</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;width:110px;">Wood</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.woodName}</td>
         </tr>`;
       }
       if (item.polishName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Polish</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.polishName}</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Polish</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.polishName}</td>
         </tr>`;
       }
       if (item.fabricName) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Fabric</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">: ${item.fabricName}</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Fabric</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.fabricName}</td>
         </tr>`;
       }
-      if (!item.woodName && !item.polishName && !item.fabricName) {
+      if (item.quotation?.length) {
         descRows += `
         <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Length</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">${
-            (item as any).length ? (item as any).length + " (mm)" : "—"
-          }</td>
-        </tr>
-        <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Width</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">${
-            (item as any).width ? (item as any).width + " (mm)" : "—"
-          }</td>
-        </tr>
-        <tr>
-          <td style="padding:4px 12px;border-bottom:${borderThin};color:#555;">Special Note</td>
-          <td style="padding:4px 12px;border-bottom:${borderThin};">${item.specialNote || "—"}</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Length</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.length} (mm)</td>
         </tr>`;
       }
+      if (item.quotation?.width) {
+        descRows += `
+        <tr>
+          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Width</td>
+          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.width} (mm)</td>
+        </tr>`;
+      }
+
       descRows += `
         <tr>
-          <td colspan="2" style="padding:8px 12px;vertical-align:bottom;">
-            <div style="font-size:9px;color:#666;margin-top:4px;">Sales Manager</div>
-            <div style="font-weight:600;font-size:10px;">${salesPersonName}</div>
+          <td colspan="2" style="padding:9px 13px;vertical-align:bottom;">
+            <div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div>
+            <div style="font-weight:600;font-size:13px;">${salesPersonName}</div>
           </td>
         </tr>`;
 
       // ── Image HTML ──
       const imageHtml = imageSrc
-        ? `<img src="${imageSrc}" alt="${item.productName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
-        : `<div style="color:#999;font-size:14px;text-align:center;padding:40px;">No Image Available</div>`;
+        ? `<img src="${imageSrc}" alt="${item.quotationName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
+        : `<div style="color:#999;font-size:17px;text-align:center;padding:40px;">No Image Available</div>`;
 
       return `
       <div class="pdf-page">
         <div style="height:100%;display:flex;flex-direction:column;">
           <div style="border:${border};flex:1;display:flex;flex-direction:column;">
 
-            ${companyHeader("Quotation")}
+            ${companyHeader()}
 
-            <!-- Notes -->
-            <div style="border-bottom:${border};padding:10px 20px;font-size:9.5px;line-height:1.7;">
-              <div style="font-weight:700;margin-bottom:4px;">Notes:</div>
-              ${notesHtml}
-            </div>
+            <!-- Special Note (conditional) -->
+            ${specialNoteHtml}
 
             ${clientInfoRow()}
 
-            <!-- Reference Image Header + CODE -->
+            <!-- Product Name + CODE: 10→13px, padding 7px 13px -->
             <div style="display:flex;border-bottom:${borderThin};">
-              <div style="flex:1;padding:6px 12px;border-right:${borderThin};font-weight:600;font-size:10px;background-color:#f9f9f9;">
+              <div style="flex:1;padding:7px 13px;border-right:${borderThin};font-weight:600;font-size:13px;background-color:#f9f9f9;">
                 ${item.quotationName || "-"}
               </div>
               <div style="display:flex;">
-                <div style="padding:6px 12px;border-right:${borderThin};font-weight:700;font-size:10px;background-color:#f9f9f9;">CODE</div>
-                <div style="padding:6px 16px;font-weight:600;font-size:10px;">${item.quotationCode || ""}</div>
+                <div style="padding:7px 13px;border-right:${borderThin};font-weight:700;font-size:13px;background-color:#f9f9f9;">CODE</div>
+                <div style="padding:7px 16px;font-weight:600;font-size:13px;">${item.quotationCode || ""}</div>
               </div>
             </div>
 
@@ -380,60 +372,36 @@ function buildProjectHTML(project: any): string {
             <!-- Bottom: Description + Pricing -->
             <div style="display:flex;border-bottom:${border};">
 
-              <!-- Left — Description -->
-              <div style="width:50%;border-right:${border};font-size:10px;">
+              <!-- Left — Description: 10→13px -->
+              <div style="width:50%;border-right:${border};font-size:13px;">
                 <table style="width:100%;border-collapse:collapse;">
                   <tbody>${descRows}</tbody>
                 </table>
               </div>
 
-              <!-- Right — Pricing -->
-              <div style="width:50%;font-size:10px;">
+              <!-- Right — Pricing: 10→13px, padding 7px 13px -->
+              <div style="width:50%;font-size:13px;">
                 <table style="width:100%;border-collapse:collapse;">
                   <tbody>
                     <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">Price</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;width:40px;"></td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.basePrice)}</td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">Discount</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">${Number(item.discountPercent)}%</td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.discountAmount)}</td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">Final Price</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.finalPrice)}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">Units</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${item.quantity}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};font-weight:600;">Total</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(item.total)}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">IGST</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">0%</td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">0</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};">CGST</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};text-align:center;">9%</td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;">${formatCurrency(item.cgst)}</td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};">Units</td>
+                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td>
                     </tr>
                     <tr style="background-color:#f9f9f9;">
-                      <td style="padding:5px 12px;border-bottom:${borderThin};font-weight:700;">Total With GST</td>
-                      <td style="padding:5px 8px;border-bottom:${borderThin};"></td>
-                      <td style="padding:5px 12px;border-bottom:${borderThin};text-align:right;font-weight:700;">${formatCurrency(item.totalWithGst)}</td>
+                      <td style="padding:9px 13px;border-bottom:${borderThin};font-weight:700;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td>
+                      <td style="padding:9px 13px;border-bottom:${borderThin};text-align:right;font-weight:700;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td>
                     </tr>
                     <tr>
-                      <td style="padding:5px 12px;text-align:center;" colspan="2">Quotation</td>
-                      <td style="padding:5px 12px;text-align:right;font-weight:700;font-size:13px;">${index + 1}</td>
+                      <td style="padding:7px 13px;text-align:left;">Quotation</td>
+                      <td style="padding:7px 13px;text-align:right;font-weight:700;font-size:16px;">${index + 1}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -448,32 +416,32 @@ function buildProjectHTML(project: any): string {
     })
     .join("");
 
-  // ═══ TERMS & CONDITIONS PAGE (matches FE exactly) ══════
+  // ═══ TERMS & CONDITIONS PAGE ══════════════════════════
 
   const termsPage = `
     <div class="pdf-page">
       <div style="height:100%;display:flex;flex-direction:column;">
         <div style="border:${border};flex:1;display:flex;flex-direction:column;">
 
-          <!-- Header — matches FE T&C header exactly -->
-          <div style="display:flex;border-bottom:${border};">
-            <div style="flex:1;padding:12px 20px;border-right:${border};align-items:center;">
-              <div style="flex-shrink:0;">
-                ${logoHtml}
+          <!-- Header: title 16→19px, company 9→12px -->
+          <div style="border-bottom:${border};">
+            <div style="padding:13px 20px;display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="flex-shrink:0;">
+                  ${logoHtml}
+                </div>
+                <div style="font-size:12px;color:#333;line-height:1.5;">
+                  <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
+                </div>
               </div>
-              <div style="font-size:9px;color:#333;line-height:1.5;">
-                <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
-              </div>
-            </div>
-            <div style="width:200px;display:flex;align-items:center;justify-content:center;">
-              <div style="font-size:16px;font-weight:700;">Terms &amp; Conditions</div>
+              <div style="font-size:19px;font-weight:700;">Terms &amp; Conditions</div>
             </div>
           </div>
 
-          <!-- Terms Content -->
-          <div style="flex:1;padding:20px 24px;font-size:10px;line-height:1.8;color:#222;">
-            <ol style="padding-left:18px;margin:0;">
-              ${termsAndConditions.map((t) => `<li style="margin-bottom:8px;padding-left:4px;">${t}</li>`).join("")}
+          <!-- Terms Content: 10→13px, padding 22px 26px, li margin 9px -->
+          <div style="flex:1;padding:22px 26px;font-size:13px;line-height:1.8;color:#222;">
+            <ol style="padding-left:20px;margin:0;">
+              ${termsAndConditions.map((t) => `<li style="margin-bottom:9px;padding-left:5px;">${t}</li>`).join("")}
             </ol>
           </div>
 
@@ -489,7 +457,7 @@ function buildProjectHTML(project: any): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after {
       margin: 0;
@@ -504,7 +472,7 @@ function buildProjectHTML(project: any): string {
     }
 
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Lora', serif;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
@@ -610,7 +578,7 @@ export async function generateProjectPDF(project: any): Promise<string> {
     logger.error("PDF generation failed:", err);
     throw err;
   } finally {
-    if (page) await page.close().catch(() => {});
+    if (page) await page.close().catch(() => { });
   }
 }
 
@@ -631,5 +599,5 @@ export function deleteProjectPDF(projectId: string): void {
 }
 
 process.on("exit", () => {
-  browserInstance?.close().catch(() => {});
+  browserInstance?.close().catch(() => { });
 });
