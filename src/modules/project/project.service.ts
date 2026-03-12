@@ -15,7 +15,7 @@ import {
   buildPaginationMeta,
 } from "../../utils/pagination.utils";
 import { logger } from "../../utils/logger";
-import { ProjectEmailData, sendProjectEmail } from "@/utils/email.service";
+import { ProjectEmailData, sendProjectEmail } from "@/services/email.service";
 
 // ─── NEW IMPORT ──────────────────────────────────────────
 import {

@@ -13,7 +13,7 @@ import {
   verifyOTP,
   isOTPExpired,
 } from "../../utils/otp.utils";
-import { sendOTPEmail } from "../../utils/email.service";
+import { sendOTPEmail } from "../../services/email.service";
 import { env } from "../../config/environment";
 import { Op } from "sequelize";
 import { logger } from "../../utils/logger";

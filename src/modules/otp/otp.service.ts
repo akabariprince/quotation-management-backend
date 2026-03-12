@@ -6,7 +6,7 @@ import {
   buildPaginationMeta,
 } from "../../utils/pagination.utils";
 import { verifyOTP as verifyOTPHash } from "../../utils/otp.utils";
-import { sendOTPEmail } from "../../utils/email.service";
+import { sendOTPEmail } from "../../services/email.service";
 import { generateOTP, hashOTP } from "../../utils/otp.utils";
 import { env } from "../../config/environment";
 import { logger } from "../../utils/logger";
