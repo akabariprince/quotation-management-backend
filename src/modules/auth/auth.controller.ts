@@ -6,11 +6,29 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AuthRequest } from "../../types";
 
 export class AuthController {
-  login = asyncHandler(async (req: Request, res: Response) => {
+  async login(req: Request, res: Response) {
     const { email, password } = req.body;
-    const result = await authService.login(email, password);
-    res.json(ApiResponse.success(result, "Login successful"));
-  });
+
+    // ★ Extract IP and User-Agent for login notification
+    const ipAddress =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.socket.remoteAddress ||
+      "Unknown";
+    const userAgent = req.headers["user-agent"] || "Unknown";
+
+    const result = await authService.login(
+      email,
+      password,
+      ipAddress,
+      userAgent
+    );
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      data: result,
+    });
+  }
 
   refreshToken = asyncHandler(async (req: Request, res: Response) => {
     const { refreshToken } = req.body;

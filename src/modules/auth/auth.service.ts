@@ -13,7 +13,7 @@ import {
   verifyOTP,
   isOTPExpired,
 } from "../../utils/otp.utils";
-import { sendOTPEmail } from "../../services/email.service";
+import { sendOTPEmail, sendLoginNotificationEmail } from "../../services/email.service";
 import { env } from "../../config/environment";
 import { Op } from "sequelize";
 import { logger } from "../../utils/logger";
@@ -44,7 +44,38 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string) {
+  // ★ Helper to get admin emails for login notification
+  private async getAdminEmails(): Promise<string[]> {
+    try {
+      const adminUsers = await User.findAll({
+        where: { isActive: true },
+        include: [
+          {
+            model: Role,
+            as: "role",
+            where: {
+              name: { [Op.in]: ["admin"] },
+              isActive: true,
+            },
+            attributes: ["id", "name"],
+          },
+        ],
+        attributes: ["id", "email"],
+      });
+
+      return adminUsers.map((u: any) => u.email).filter(Boolean);
+    } catch (error) {
+      logger.error("Failed to fetch admin emails:", error);
+      return [];
+    }
+  }
+
+  async login(
+    email: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string
+  ) {
     const user = await User.findOne({
       where: { email, isActive: true },
       include: [{ model: Role, as: "role" }],
@@ -71,17 +102,78 @@ export class AuthService {
       lastLogin: new Date(),
     });
 
+    // ★ Send login notification to admin (fire-and-forget)
+    this.sendLoginNotification(user, ipAddress, userAgent);
+
     return {
       user: this.buildUserResponse(user),
       ...tokens,
     };
   }
 
+  // ★ Fire-and-forget login notification
+  private async sendLoginNotification(
+    user: any,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    try {
+      const adminEmails = await this.getAdminEmails();
+
+      if (adminEmails.length === 0) {
+        logger.info("No admin emails found for login notification");
+        return;
+      }
+
+      const loginData = {
+        userName: user.name || user.email,
+        userEmail: user.email,
+        userRole: user.role?.displayName || user.role?.name || "Unknown",
+        loginTime: new Date(),
+        ipAddress: ipAddress || undefined,
+        userAgent: userAgent || undefined,
+      };
+
+      // Send to all admins
+      for (const adminEmail of adminEmails) {
+        // Don't notify admin about their own login
+        if (adminEmail === user.email) continue;
+
+        const sent = await sendLoginNotificationEmail(adminEmail, loginData);
+
+        // Log the email
+        await EmailLog.create({
+          toEmail: adminEmail,
+          subject: `Login Alert: ${loginData.userName} (${loginData.userRole}) - ESIPL`,
+          type: "login_notification",
+          referenceId: user.id,
+          referenceType: "user",
+          status: sent ? "sent" : "failed",
+          sentBy: user.id,
+        });
+
+        if (!sent) {
+          logger.warn(
+            `Failed to send login notification to ${adminEmail}`
+          );
+        }
+      }
+    } catch (error) {
+      // Never let notification failure break the login flow
+      logger.error("Login notification email failed:", error);
+    }
+  }
+
   async refreshToken(refreshToken: string) {
     try {
       const decoded = verifyRefreshToken(refreshToken);
+
       const user = await User.findOne({
-        where: { id: decoded.userId, refreshToken, isActive: true },
+        where: {
+          id: decoded.userId,
+          refreshToken,
+          isActive: true,
+        },
         include: [{ model: Role, as: "role" }],
       });
 
@@ -91,6 +183,7 @@ export class AuthService {
 
       const payload = this.buildTokenPayload(user);
       const tokens = generateTokens(payload);
+
       await user.update({ refreshToken: tokens.refreshToken });
 
       return {
@@ -103,7 +196,10 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    await User.update({ refreshToken: null }, { where: { id: userId } });
+    await User.update(
+      { refreshToken: null },
+      { where: { id: userId } }
+    );
   }
 
   async requestOTP(
@@ -137,7 +233,9 @@ export class AuthService {
       where: {
         email,
         type,
-        createdAt: { [Op.gte]: new Date(Date.now() - 60 * 60 * 1000) },
+        createdAt: {
+          [Op.gte]: new Date(Date.now() - 60 * 60 * 1000),
+        },
       },
     });
 
@@ -192,7 +290,11 @@ export class AuthService {
       logger.warn(`Failed to send OTP email to ${email}`);
     }
 
-    return { otpLogId: otpLog.id, message: "OTP sent successfully", expiresAt };
+    return {
+      otpLogId: otpLog.id,
+      message: "OTP sent successfully",
+      expiresAt,
+    };
   }
 
   async verifyOTPCode(email: string, otp: string, otpLogId: string) {
@@ -207,18 +309,26 @@ export class AuthService {
       throw ApiError.badRequest("OTP has expired");
     }
 
-    if (otpLog.maxAttempts > 0 && otpLog.attempts >= otpLog.maxAttempts) {
+    if (
+      otpLog.maxAttempts > 0 &&
+      otpLog.attempts >= otpLog.maxAttempts
+    ) {
       await otpLog.update({ status: "expired" });
       throw ApiError.badRequest("Maximum OTP attempts exceeded");
     }
 
     const isValid = await verifyOTP(otp, otpLog.otpHash);
+
     if (!isValid) {
       await otpLog.update({ attempts: otpLog.attempts + 1 });
       throw ApiError.badRequest("Invalid OTP");
     }
 
-    await otpLog.update({ status: "approved", approvedAt: new Date() });
+    await otpLog.update({
+      status: "approved",
+      approvedAt: new Date(),
+    });
+
     return { success: true, otpLog: otpLog.toJSON() };
   }
 

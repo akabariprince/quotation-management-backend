@@ -62,8 +62,7 @@ class ProjectController {
 
   sendEmail = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { to, cc, subject, message, type } = req.body;
-    const userId = (req as any).user?.id;
+    const { to, cc, subject, message, type, userId } = req.body;
     if (!to) {
       return res
         .status(400)

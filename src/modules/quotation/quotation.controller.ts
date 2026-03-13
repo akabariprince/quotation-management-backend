@@ -11,7 +11,9 @@ class QuotationController extends BaseCrudController<Quotation> {
   constructor() {
     super(quotationService, "Quotation");
   }
-
+  async findOne(condition: any) {
+    return await Quotation.findOne({ where: condition });
+  }
   create = asyncHandler(async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[] | undefined;
     const body = req.body;
@@ -30,6 +32,17 @@ class QuotationController extends BaseCrudController<Quotation> {
           images.push(...existingImages);
         }
       } catch (e) { }
+    }
+
+    // 🔹 Check if partCode already exists
+    const existingQuotation = await this.findOne({
+      partCode: body.partCode,
+    });
+
+    if (existingQuotation) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Product Code already exists"));
     }
 
     const quotationData = {
@@ -55,6 +68,7 @@ class QuotationController extends BaseCrudController<Quotation> {
     };
 
     const record = await this.service.create(quotationData as any);
+
     res.status(201).json(ApiResponse.created(record, "Quotation created"));
   });
 
