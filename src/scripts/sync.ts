@@ -9,14 +9,14 @@ const sync = async () => {
     await sequelize.authenticate();
     logger.info('✅ Connected to database');
 
-    const syncOption = env.db.sync === 'force'
+    const syncOption = process.env.DB_SYNC === 'force'
       ? { force: true }
-      : env.db.sync === 'alter'
+      : process.env.DB_SYNC === 'alter'
         ? { alter: true }
         : {};
 
     await sequelize.sync(syncOption);
-    logger.info(`✅ Database synced (${env.db.sync} mode)`);
+    logger.info(`✅ Database synced (${process.env.DB_SYNC || 'default'} mode)`);
 
     process.exit(0);
   } catch (error) {

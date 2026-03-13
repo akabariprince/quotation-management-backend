@@ -6,8 +6,6 @@ import sequelize from './config/sequelize';
 
 // Import models to register associations
 import './models';
-import { seedDatabase } from './database/seeders/seeder';
-
 // Import seeder
 
 const startServer = async () => {

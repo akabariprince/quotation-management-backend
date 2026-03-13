@@ -5,16 +5,36 @@ import fs from "fs";
 import { env } from "../config/environment";
 import { logger } from "../utils/logger";
 
-// ─── Transporter ─────────────────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host: env.smtp.host,
-  port: env.smtp.port,
-  secure: env.smtp.secure,
-  auth: {
-    user: env.smtp.user,
-    pass: env.smtp.password,
-  },
-});
+import { settingService } from "../modules/setting/setting.service";
+
+// ─── Transporter Config Fetcher ──────────────────────────────────────────
+const getEmailConfig = async () => {
+  const dbConfig = await settingService.getSetting("email_config");
+  if (dbConfig) {
+    return {
+      host: dbConfig.host,
+      port: Number(dbConfig.port),
+      secure: dbConfig.secure === "true" || dbConfig.secure === true,
+      auth: {
+        user: dbConfig.user,
+        pass: dbConfig.password,
+      },
+      from: dbConfig.from || dbConfig.user,
+    };
+  }
+
+  // Fallback to env
+  return {
+    host: env.smtp.host,
+    port: env.smtp.port,
+    secure: env.smtp.secure,
+    auth: {
+      user: env.smtp.user,
+      pass: env.smtp.password,
+    },
+    from: env.smtp.from,
+  };
+};
 
 // ─── Logo ────────────────────────────────────────────────────────────────
 const LOGO_PATH = path.join(process.cwd(), "public", "logo.png");
@@ -342,13 +362,20 @@ export interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    // Default attachments: always include logo as CID
-    const defaultAttachments = [
-      {
-        filename: "logo.png",
-        path: LOGO_PATH,
-        cid: LOGO_CID,
+    const config = await getEmailConfig();
+    const transporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.auth.user,
+        pass: config.auth.pass,
       },
+    });
+
+    // Default attachments
+    const defaultAttachments: any = [
+
     ];
 
     // Merge default + any extra attachments
@@ -358,7 +385,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     ];
 
     const mailOptions = {
-      from: env.smtp.from,
+      from: config.from,
       to: options.to,
       cc: options.cc || undefined,
       subject: options.subject,

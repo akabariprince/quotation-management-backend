@@ -121,8 +121,7 @@ class ProjectService {
   }
 
   private generateItemNumber(projectNo: string, index: number): string {
-    const randomPart = this.generateRandomDigits(6);
-    return `${projectNo}Q${randomPart}${index}`;
+    return `${projectNo}-${index + 1}`;
   }
 
   // ────────────────────────────────────────────────────────
@@ -227,7 +226,8 @@ class ProjectService {
   async create(data: any) {
     const transaction: Transaction = await sequelize.transaction();
     try {
-      const projectNo = await this.getNextProjectNumber();
+      // If frontend passes projectNo, use it. Otherwise generate a new one.
+      const projectNo = data.projectNo || await this.getNextProjectNumber();
       const { items, ...projectData } = data;
 
       const project = await Project.create(

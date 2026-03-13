@@ -16,6 +16,7 @@ import OTPLog from "./OTPLog.model";
 import EmailLog from "./EmailLog.model";
 import CategoryNo from "./CategoryNo.model";
 import Variant from "./Variant.model";
+import Setting from "./Setting.model";
 // Role -> User
 Role.hasMany(User, { foreignKey: "roleId", as: "users" });
 User.belongsTo(Role, { foreignKey: "roleId", as: "role" });
@@ -154,4 +155,5 @@ export {
   EmailLog,
   CategoryNo,
   Variant,
+  Setting,
 };
