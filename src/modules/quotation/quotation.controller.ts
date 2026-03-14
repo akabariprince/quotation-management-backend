@@ -4,6 +4,8 @@ import { quotationService } from "./quotation.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../utils/asyncHandler";
 import Quotation from "../../models/Quotation.model";
+import ProjectItem from "../../models/ProjectItem.model";
+import { Op } from "sequelize";
 import fs from "fs";
 import path from "path";
 
@@ -11,9 +13,11 @@ class QuotationController extends BaseCrudController<Quotation> {
   constructor() {
     super(quotationService, "Quotation");
   }
+
   async findOne(condition: any) {
     return await Quotation.findOne({ where: condition });
   }
+
   create = asyncHandler(async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[] | undefined;
     const body = req.body;
@@ -34,15 +38,31 @@ class QuotationController extends BaseCrudController<Quotation> {
       } catch (e) { }
     }
 
-    // 🔹 Check if partCode already exists
+    //  Check if partCode already exists
     const existingQuotation = await this.findOne({
       partCode: body.partCode,
     });
 
     if (existingQuotation) {
+      //  Clean up uploaded files since we're rejecting the request
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          const fullPath = path.join(
+            process.cwd(),
+            `uploads/quotations/${file.filename}`
+          );
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+          }
+        });
+      }
       return res
         .status(400)
-        .json(ApiResponse.error("Product Code already exists"));
+        .json(
+          ApiResponse.error(
+            `Product Code "${body.partCode}" already exists. Please use a different code.`
+          )
+        );
     }
 
     const quotationData = {
@@ -76,6 +96,38 @@ class QuotationController extends BaseCrudController<Quotation> {
     const id = req.params.id as string;
     const files = req.files as Express.Multer.File[] | undefined;
     const body = req.body;
+
+    //  Check if partCode already exists for ANOTHER quotation (not this one)
+    if (body.partCode !== undefined) {
+      const existingQuotation = await Quotation.findOne({
+        where: {
+          partCode: body.partCode,
+          id: { [Op.ne]: id }, // exclude current record
+        },
+      });
+
+      if (existingQuotation) {
+        //  Clean up uploaded files since we're rejecting the request
+        if (files && files.length > 0) {
+          files.forEach((file) => {
+            const fullPath = path.join(
+              process.cwd(),
+              `uploads/quotations/${file.filename}`
+            );
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath);
+            }
+          });
+        }
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              `Product Code "${body.partCode}" is already used by another product. Please use a different code.`
+            )
+          );
+      }
+    }
 
     const updateData: any = {};
 
@@ -141,7 +193,7 @@ class QuotationController extends BaseCrudController<Quotation> {
           const oldImages: string[] = quotationData.images || [];
           const removedImages = oldImages.filter(
             (img: string) =>
-              !images.includes(img) && img.startsWith("uploads/"),
+              !images.includes(img) && img.startsWith("uploads/")
           );
           removedImages.forEach((imgPath: string) => {
             const fullPath = path.join(process.cwd(), imgPath);
@@ -176,7 +228,7 @@ class QuotationController extends BaseCrudController<Quotation> {
 
     const quotationData = existingQuotation.toJSON() as any;
     const newImagePaths = files.map(
-      (file) => `uploads/quotations/${file.filename}`,
+      (file) => `uploads/quotations/${file.filename}`
     );
     const currentImages: string[] = quotationData.images || [];
     const updatedImages = [...currentImages, ...newImagePaths];
@@ -187,27 +239,72 @@ class QuotationController extends BaseCrudController<Quotation> {
     res.json(ApiResponse.success(record, "Images uploaded successfully"));
   });
 
+  //  DELETE — check if quotation is used in any ProjectItem
   delete = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
+    //  First check if quotation exists
+    const quotation = await this.service.findById(id);
+    if (!quotation) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Quotation not found"));
+    }
+
+    //  Check if this quotation is used in any project items
+    const usedInProjects = await ProjectItem.findAll({
+      where: { quotationId: id },
+      include: [
+        {
+          model: require("../../models/Project.model").default,
+          as: "project",
+          attributes: ["id", "projectNo", "projectName"],
+        },
+      ],
+      limit: 10, // limit for performance; show up to 10 references
+    });
+
+    if (usedInProjects && usedInProjects.length > 0) {
+      //  Build a helpful message listing which projects use this quotation
+      const quotationData = quotation.toJSON() as any;
+      const projectDetails = usedInProjects.map((item: any) => {
+        const project = item.project;
+        return project
+          ? `${project.projectNo}${project.projectName ? ` (${project.projectName})` : ""}`
+          : "Unknown Project";
+      });
+
+      // Remove duplicates (same project can have multiple items with same quotation)
+      const uniqueProjects = [...new Set(projectDetails)];
+
+      const projectList = uniqueProjects.join(", ");
+      const totalCount = usedInProjects.length;
+
+      return res.status(400).json(
+        ApiResponse.error(
+          `Cannot delete product "${quotationData.name || quotationData.partCode}". ` +
+          `It is currently used in ${totalCount} project item(s) across the following project(s): ${projectList}. ` +
+          `Please remove it from all projects before deleting.`
+        )
+      );
+    }
+
+    //  Safe to delete — clean up images
     try {
-      const quotation = await this.service.findById(id);
-      if (quotation) {
-        const quotationData = quotation.toJSON() as any;
-        const images: string[] = quotationData.images || [];
-        images.forEach((imgPath: string) => {
-          if (imgPath.startsWith("uploads/")) {
-            const fullPath = path.join(process.cwd(), imgPath);
-            if (fs.existsSync(fullPath)) {
-              fs.unlinkSync(fullPath);
-            }
+      const quotationData = quotation.toJSON() as any;
+      const images: string[] = quotationData.images || [];
+      images.forEach((imgPath: string) => {
+        if (imgPath.startsWith("uploads/")) {
+          const fullPath = path.join(process.cwd(), imgPath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
           }
-        });
-      }
+        }
+      });
     } catch (e) { }
 
     await this.service.delete(id);
-    res.json(ApiResponse.noContent("Quotation deleted"));
+    res.json(ApiResponse.noContent("Quotation deleted successfully"));
   });
 }
 
