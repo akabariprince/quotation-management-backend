@@ -375,7 +375,13 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 
     // Default attachments
     const defaultAttachments: any = [
-
+      {
+        filename: "logo.png",
+        path: LOGO_PATH,
+        cid: LOGO_CID,
+        contentType: "image/png",
+        contentDisposition: "inline",
+      }
     ];
 
     // Merge default + any extra attachments

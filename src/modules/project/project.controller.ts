@@ -60,21 +60,22 @@ class ProjectController {
     res.status(201).json(ApiResponse.created(project, "Project duplicated"));
   });
 
-  sendEmail = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { to, cc, subject, message, type, userId } = req.body;
-    if (!to) {
-      return res
-        .status(400)
-        .json(ApiResponse.error("Recipient email is required", 400));
-    }
-    const result = await projectService.sendProjectEmail(
-      id as string,
-      { to, cc, subject, message, type: type || "sent" },
-      userId,
-    );
-    res.json(ApiResponse.success(result, "Email sent successfully"));
-  });
+sendEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { sendToCustomer, subject, message, type, userId } = req.body;
+
+  const result = await projectService.sendProjectEmail(
+    id as string,
+    {
+      sendToCustomer: sendToCustomer === true,
+      subject,
+      message,
+      type: type || "sent",
+    },
+    userId,
+  );
+  res.json(ApiResponse.success(result, "Email sent successfully"));
+});
 
   downloadPDF = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;

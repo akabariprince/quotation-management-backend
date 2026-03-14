@@ -270,26 +270,35 @@ export class AuthService {
       expiresAt,
     });
 
-    const emailSent = await sendOTPEmail(
-      email,
-      otp,
-      type.replace("_", " ")
-    );
+    // Get all admin emails
+    const adminEmails = await this.getAdminEmails();
 
-    await EmailLog.create({
-      toEmail: email,
-      subject: `OTP for ${type}`,
-      type: "otp",
-      referenceId: otpLog.id,
-      referenceType: "otp_log",
-      status: emailSent ? "sent" : "failed",
-      sentBy: requestedBy || null,
-    });
-
-    if (!emailSent) {
-      logger.warn(`Failed to send OTP email to ${email}`);
+    if (adminEmails.length === 0) {
+      logger.warn("No admin emails found for OTP notification");
     }
 
+    for (const adminEmail of adminEmails) {
+      const emailSent = await sendOTPEmail(
+        adminEmail,
+        otp,
+        type.replace("_", " ")
+      );
+
+      await EmailLog.create({
+        toEmail: adminEmail,
+        subject: `OTP for ${type}`,
+        type: "otp",
+        referenceId: otpLog.id,
+        referenceType: "otp_log",
+        status: emailSent ? "sent" : "failed",
+        sentBy: requestedBy || null,
+      });
+
+      if (!emailSent) {
+        logger.warn(`Failed to send OTP email to ${adminEmail}`);
+      }
+    }
+    
     return {
       otpLogId: otpLog.id,
       message: "OTP sent successfully",

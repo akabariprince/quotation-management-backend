@@ -1,7 +1,7 @@
 // src/modules/project/project.service.ts
 
 import { Includeable, Op, Transaction } from "sequelize";
-import { EmailLog, sequelize, User } from "../../models";
+import { EmailLog, Role, sequelize, User } from "../../models";
 import Project from "../../models/Project.model";
 import ProjectItem from "../../models/ProjectItem.model";
 import Customer from "../../models/Customer.model";
@@ -430,12 +430,36 @@ class ProjectService {
     return getProjectPDFPath(projectId);
   }
 
-  // ────────────────────────────────────────────────────────
+  // ★ Helper to get admin emails (same pattern as auth.service)
+  private async getAdminEmails(): Promise<string[]> {
+    try {
+      const adminUsers = await User.findAll({
+        where: { isActive: true },
+        include: [
+          {
+            model: Role,
+            as: "role",
+            where: {
+              name: { [Op.in]: ["admin"] },
+              isActive: true,
+            },
+            attributes: ["id", "name"],
+          },
+        ],
+        attributes: ["id", "email"],
+      });
+
+      return adminUsers.map((u: any) => u.email).filter(Boolean);
+    } catch (error) {
+      logger.error("Failed to fetch admin emails:", error);
+      return [];
+    }
+  }
+
   async sendProjectEmail(
     projectId: string,
     emailData: {
-      to: string;
-      cc?: string;
+      sendToCustomer: boolean;
       subject?: string;
       message?: string;
       type: string;
@@ -484,36 +508,81 @@ class ProjectService {
             ? "created"
             : "sent";
 
-    const emailSent = await sendProjectEmail(
-      emailData.to,
-      projectEmailData,
-      emailType,
-      emailData.cc,
-    );
+    const emailSubject =
+      emailData.subject ||
+      `Project ${project.projectNo} - Ecstatics Spaces`;
 
-    await EmailLog.create({
-      toEmail: emailData.to,
-      subject:
-        emailData.subject || `Project ${project.projectNo} - Ecstatics Spaces`,
-      type: `project_${emailType}`,
-      referenceId: project.id,
-      referenceType: "project",
-      status: emailSent ? "sent" : "failed",
-      sentBy: userId,
-    });
-
-    if (!emailSent)
-      throw new Error("Failed to send email. Please check SMTP configuration.");
-
+    // ★ Update status immediately (don't wait for emails)
     if (project.status === "draft") {
       await project.update({ status: "sent" });
     }
 
+    // ★ Fire-and-forget: send emails in background
+    this.sendProjectEmailsInBackground(
+      projectEmailData,
+      emailType,
+      emailSubject,
+      emailData.sendToCustomer,
+      customer?.email,
+      project.id,
+      userId,
+    );
+
     return {
       success: true,
-      message: `Email sent to ${emailData.to}`,
+      message: "Email is being sent",
       projectNo: project.projectNo,
     };
+  }
+
+  // ★ Private background sender — never throws
+  private async sendProjectEmailsInBackground(
+    data: ProjectEmailData,
+    emailType: "created" | "sent" | "revised" | "approved",
+    subject: string,
+    sendToCustomer: boolean,
+    customerEmail: string | undefined,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    try {
+      // 1) Always send to admins
+      const adminEmails = await this.getAdminEmails();
+      for (const adminEmail of adminEmails) {
+        const sent = await sendProjectEmail(
+          adminEmail,
+          { ...data, recipientName: "Admin" },
+          emailType,
+        );
+        await EmailLog.create({
+          toEmail: adminEmail,
+          subject,
+          type: `project_${emailType}`,
+          referenceId: projectId,
+          referenceType: "project",
+          status: sent ? "sent" : "failed",
+          sentBy: userId,
+        });
+        if (!sent) logger.warn(`Project email failed → ${adminEmail}`);
+      }
+
+      // 2) Optionally send to customer
+      if (sendToCustomer && customerEmail) {
+        const sent = await sendProjectEmail(customerEmail, data, emailType);
+        await EmailLog.create({
+          toEmail: customerEmail,
+          subject,
+          type: `project_${emailType}`,
+          referenceId: projectId,
+          referenceType: "project",
+          status: sent ? "sent" : "failed",
+          sentBy: userId,
+        });
+        if (!sent) logger.warn(`Project email failed → ${customerEmail}`);
+      }
+    } catch (error) {
+      logger.error("Background project email failed:", error);
+    }
   }
 }
 

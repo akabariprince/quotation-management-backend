@@ -7,6 +7,7 @@ import { logger } from "../utils/logger";
 
 // ─── Constants ───────────────────────────────────────────
 const PDF_DIR = path.join(process.cwd(), "uploads", "pdfs");
+const MAX_PDF_SIZE_MB = 10; // Optional size check
 
 if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR, { recursive: true });
@@ -19,6 +20,7 @@ const logoCandidates = [
   path.join(process.cwd(), "uploads", "logo.png"),
   path.join(process.cwd(), "logo.png"),
 ];
+
 for (const logoPath of logoCandidates) {
   try {
     if (fs.existsSync(logoPath)) {
@@ -63,16 +65,7 @@ function resolveImageSrc(imagePath: string): string {
       if (fs.existsSync(fullPath)) {
         const data = fs.readFileSync(fullPath);
         const ext = path.extname(fullPath).slice(1).toLowerCase();
-        const mime =
-          ext === "jpg"
-            ? "jpeg"
-            : ext === "png"
-              ? "png"
-              : ext === "webp"
-                ? "webp"
-                : ext === "gif"
-                  ? "gif"
-                  : "jpeg";
+        const mime = ["jpg", "jpeg"].includes(ext) ? "jpeg" : ext === "png" ? "png" : ext === "webp" ? "webp" : ext === "gif" ? "gif" : "jpeg";
         return `data:image/${mime};base64,${data.toString("base64")}`;
       }
     } catch {
@@ -146,19 +139,14 @@ function buildProjectHTML(project: any): string {
   const border = "1.5px solid #000";
   const borderThin = "1px solid #000";
 
-  // ── Logo HTML (height:70px matches FE) ──
   const logoHtml = LOGO_BASE64
     ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:70px;width:auto;object-fit:contain;" />`
     : `<div style="font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;">ecstatics<span>.</span></div>`;
 
-  // ── Company Header (no right panel — matches FE) ──
-  // font-size: 9→12px, padding 13px 20px
   const companyHeader = () => `
     <div style="border-bottom:${border};">
       <div style="padding:13px 20px;">
-        <div style="flex-shrink:0;">
-          ${logoHtml}
-        </div>
+        <div style="flex-shrink:0;">${logoHtml}</div>
         <div style="font-size:12px;color:#333;line-height:1.5;margin-top:2px;">
           <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
           <div>3120, Ganga Trueno, Airport Road,</div>
@@ -168,27 +156,13 @@ function buildProjectHTML(project: any): string {
       </div>
     </div>`;
 
-  // ── Client Info Row ─────────────────────────────────────
-  // font-size: 10→13px, minWidth:95px, date width:170px, padding 11px 20px
   const clientInfoRow = () => `
     <div style="display:flex;border-bottom:${border};">
       <div style="flex:1;padding:11px 20px;border-right:${border};font-size:13px;">
-        <div style="display:flex;gap:8px;margin-bottom:5px;">
-          <span style="color:#666;min-width:95px;">Client name</span>
-          <span style="font-weight:600;">${customer.name || ""}</span>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:5px;">
-          <span style="color:#666;min-width:95px;">Contact No</span>
-          <span>${customer.mobile || ""}</span>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:5px;">
-          <span style="color:#666;min-width:95px;">Project Name</span>
-          <span style="font-weight:600;">${project.projectName || "—"}</span>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <span style="color:#666;min-width:95px;">Project No</span>
-          <span style="font-weight:600;">${project.projectNo || "—"}</span>
-        </div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Client name</span><span style="font-weight:600;">${customer.name || ""}</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Contact No</span><span>${customer.mobile || ""}</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Project Name</span><span style="font-weight:600;">${project.projectName || "—"}</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:#666;min-width:95px;">Project No</span><span style="font-weight:600;">${project.projectNo || "—"}</span></div>
       </div>
       <div style="width:170px;padding:11px 20px;font-size:13px;text-align:right;">
         <div style="color:#666;margin-bottom:5px;">Date</div>
@@ -196,49 +170,34 @@ function buildProjectHTML(project: any): string {
       </div>
     </div>`;
 
-  // ── Page Footer ── font-size: 9→12px, padding 9px 20px
   const pageFooter = () => `
     <div style="border-top:${border};padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
-      <span>(+91) 7066 46 6060</span>
-      <span>info@esipl.in</span>
+      <span>(+91) 7066 46 6060</span><span>info@esipl.in</span>
     </div>`;
 
-  // ── Product Page Footer (NO border-top) ── font-size: 9→12px, padding 9px 20px
   const productPageFooter = () => `
     <div style="padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
-      <span>(+91) 7066 46 6060</span>
-      <span>info@esipl.in</span>
+      <span>(+91) 7066 46 6060</span><span>info@esipl.in</span>
     </div>`;
 
-  // ═══ PAGE 1 — QUOTATION SUMMARY ════════════════════════
-
   const summaryRows = items
-    .map(
-      (item: any, index: number) => `
+    .map((item: any, index: number) => `
     <tr>
       <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:center;">${index + 1}</td>
       <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;font-weight:500;">${item.quotationName + "  (" + item.quotationCode + ")"}</td>
       <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:right;">${formatCurrency(getPriceInclGst(item))}</td>
       <td style="border-bottom:1px solid #ccc;border-right:${borderThin};padding:9px 12px;text-align:center;">${item.quantity}</td>
       <td style="border-bottom:1px solid #ccc;padding:9px 12px;text-align:right;font-weight:500;">${formatCurrency(item.totalWithGst)}</td>
-    </tr>`,
-    )
+    </tr>`)
     .join("");
 
   const page1 = `
     <div class="pdf-page">
       <div style="height:100%;display:flex;flex-direction:column;">
         <div style="border:${border};flex:1;display:flex;flex-direction:column;padding:0;">
-
           ${companyHeader()}
           ${clientInfoRow()}
-
-          <!-- Summary Title: 13→16px, padding 9px -->
-          <div style="border-bottom:${border};padding:9px 20px;text-align:center;font-weight:700;font-size:16px;background-color:#f9f9f9;">
-            Quotation Summary
-          </div>
-
-          <!-- Summary Table: 10→13px -->
+          <div style="border-bottom:${border};padding:9px 20px;text-align:center;font-weight:700;font-size:16px;background-color:#f9f9f9;">Quotation Summary</div>
           <div style="flex:1;">
             <table style="width:100%;border-collapse:collapse;font-size:13px;">
               <thead>
@@ -259,206 +218,69 @@ function buildProjectHTML(project: any): string {
               </tbody>
             </table>
           </div>
-
-          <!-- Bottom: Sales Manager + Grand Total -->
           <div style="border-top:${border};display:flex;">
             <div style="flex:1;padding:13px 20px;border-right:${border};display:flex;flex-direction:column;justify-content:flex-end;">
               <div style="font-size:12px;color:#666;">Sales Manager</div>
               <div style="font-size:14px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
             </div>
           </div>
-
           ${pageFooter()}
         </div>
       </div>
     </div>`;
 
-  // ═══ PRODUCT DETAIL PAGES ══════════════════════════════
+  const productPages = items.map((item: any, index: number) => {
+    const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
+    const specialNoteHtml = item.specialNote
+      ? `<div style="border-bottom:${border};padding:9px 20px;font-size:12.5px;line-height:1.7;"><span style="font-weight:700;">Note: </span><span style="color:#333;">${item.specialNote}</span></div>`
+      : "";
 
-  const productPages = items
-    .map((item: any, index: number) => {
-      const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
+    let descRows = `<tr><td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;">Description</td></tr>`;
+    if (item.description) {
+      descRows += `<tr><td colspan="2" style="padding:5px 13px;border-bottom:${borderThin};font-size:12px;color:#444;line-height:1.5;">${item.description}</td></tr>`;
+    }
+    if (item.woodName) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;width:110px;">Wood</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.woodName}</td></tr>`; }
+    if (item.polishName) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Polish</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.polishName}</td></tr>`; }
+    if (item.fabricName) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Fabric</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.fabricName}</td></tr>`; }
+    if (item.quotation?.length) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Length</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.length} (mm)</td></tr>`; }
+    if (item.quotation?.width) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Width</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.width} (mm)</td></tr>`; }
+    descRows += `<tr><td colspan="2" style="padding:9px 13px;vertical-align:bottom;"><div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div><div style="font-weight:600;font-size:13px;">${salesPersonName}</div></td></tr>`;
 
-      // ── Special Note (conditional) ── font-size: 9.5→12.5px, padding 9px
-      const specialNoteHtml = item.specialNote
-        ? `<div style="border-bottom:${border};padding:9px 20px;font-size:12.5px;line-height:1.7;">
-            <span style="font-weight:700;">Note: </span>
-            <span style="color:#333;">${item.specialNote}</span>
-          </div>`
-        : "";
+    const imageHtml = imageSrc
+      ? `<img src="${imageSrc}" alt="${item.quotationName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
+      : `<div style="color:#999;font-size:17px;text-align:center;padding:40px;">No Image Available</div>`;
 
-      // ── Description rows ── font-size: 10→13px, label width:110px, padding 5px 13px
-      let descRows = `
-        <tr>
-          <td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;">Description</td>
-        </tr>`;
-
-      if (item.description) {
-        descRows += `
-        <tr>
-          <td colspan="2" style="padding:5px 13px;border-bottom:${borderThin};font-size:12px;color:#444;line-height:1.5;">${item.description}</td>
-        </tr>`;
-      }
-
-      if (item.woodName) {
-        descRows += `
-        <tr>
-          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;width:110px;">Wood</td>
-          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.woodName}</td>
-        </tr>`;
-      }
-      if (item.polishName) {
-        descRows += `
-        <tr>
-          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Polish</td>
-          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.polishName}</td>
-        </tr>`;
-      }
-      if (item.fabricName) {
-        descRows += `
-        <tr>
-          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Fabric</td>
-          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.fabricName}</td>
-        </tr>`;
-      }
-      if (item.quotation?.length) {
-        descRows += `
-        <tr>
-          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Length</td>
-          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.length} (mm)</td>
-        </tr>`;
-      }
-      if (item.quotation?.width) {
-        descRows += `
-        <tr>
-          <td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Width</td>
-          <td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.width} (mm)</td>
-        </tr>`;
-      }
-
-      descRows += `
-        <tr>
-          <td colspan="2" style="padding:9px 13px;vertical-align:bottom;">
-            <div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div>
-            <div style="font-weight:600;font-size:13px;">${salesPersonName}</div>
-          </td>
-        </tr>`;
-
-      // ── Image HTML ──
-      const imageHtml = imageSrc
-        ? `<img src="${imageSrc}" alt="${item.quotationName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
-        : `<div style="color:#999;font-size:17px;text-align:center;padding:40px;">No Image Available</div>`;
-
-      return `
+    return `
       <div class="pdf-page">
         <div style="height:100%;display:flex;flex-direction:column;">
           <div style="border:${border};flex:1;display:flex;flex-direction:column;">
-
             ${companyHeader()}
-
-            <!-- Special Note (conditional) -->
             ${specialNoteHtml}
-
             ${clientInfoRow()}
-
-            <!-- Product Name + CODE: 10→13px, padding 7px 13px -->
-            <div style="display:flex;border-bottom:${borderThin};">
-              <div style="flex:1;padding:7px 13px;border-right:${borderThin};font-weight:600;font-size:13px;background-color:#f9f9f9;">
-                ${item.quotationName || "-"}
-              </div>
-              <div style="display:flex;">
-                <div style="padding:7px 13px;border-right:${borderThin};font-weight:700;font-size:13px;background-color:#f9f9f9;">CODE</div>
-                <div style="padding:7px 16px;font-weight:600;font-size:13px;">${item.quotationCode || ""}</div>
-              </div>
-            </div>
-
-            <!-- Large Image -->
-            <div style="display:flex;align-items:center;justify-content:center;border-bottom:${borderThin};">
-              ${imageHtml}
-            </div>
-
-            <!-- Bottom: Description + Pricing -->
-            <div style="display:flex;border-bottom:${border};">
-
-              <!-- Left — Description: 10→13px -->
-              <div style="width:50%;border-right:${border};font-size:13px;">
-                <table style="width:100%;border-collapse:collapse;">
-                  <tbody>${descRows}</tbody>
-                </table>
-              </div>
-
-              <!-- Right — Pricing: 10→13px, padding 7px 13px -->
-              <div style="width:50%;font-size:13px;">
-                <table style="width:100%;border-collapse:collapse;">
-                  <tbody>
-                    <tr>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};">Units</td>
-                      <td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td>
-                    </tr>
-                    <tr style="background-color:#f9f9f9;">
-                      <td style="padding:9px 13px;border-bottom:${borderThin};font-weight:700;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td>
-                      <td style="padding:9px 13px;border-bottom:${borderThin};text-align:right;font-weight:700;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td>
-                    </tr>
-                   <tr>
-                    <td style="padding:7px 13px;text-align:left;">Quotation No</td>
-                    <td style="padding:7px 13px;text-align:right;font-weight:700;font-size:14px;">${item.projectQuotationNo || index + 1}</td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
+            <div style="display:flex;border-bottom:${borderThin};"><div style="flex:1;padding:7px 13px;border-right:${borderThin};font-weight:600;font-size:13px;background-color:#f9f9f9;">${item.quotationName || "-"}</div><div style="display:flex;"><div style="padding:7px 13px;border-right:${borderThin};font-weight:700;font-size:13px;background-color:#f9f9f9;">CODE</div><div style="padding:7px 16px;font-weight:600;font-size:13px;">${item.quotationCode || ""}</div></div></div>
+            <div style="display:flex;align-items:center;justify-content:center;border-bottom:${borderThin};">${imageHtml}</div>
+            <div style="display:flex;border-bottom:${border};"><div style="width:50%;border-right:${border};font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody>${descRows}</tbody></table></div><div style="width:50%;font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody><tr><td style="padding:7px 13px;border-bottom:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr><tr><td style="padding:7px 13px;border-bottom:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr><tr><td style="padding:7px 13px;border-bottom:${borderThin};">Units</td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr><tr style="background-color:#f9f9f9;"><td style="padding:9px 13px;border-bottom:${borderThin};font-weight:700;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:9px 13px;border-bottom:${borderThin};text-align:right;font-weight:700;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr><tr><td style="padding:7px 13px;text-align:left;">Quotation No</td><td style="padding:7px 13px;text-align:right;font-weight:700;font-size:14px;">${item.projectQuotationNo || index + 1}</td></tr></tbody></table></div></div>
             ${productPageFooter()}
-
           </div>
         </div>
       </div>`;
-    })
-    .join("");
-
-  // ═══ TERMS & CONDITIONS PAGE ══════════════════════════
+  }).join("");
 
   const termsPage = `
     <div class="pdf-page">
       <div style="height:100%;display:flex;flex-direction:column;">
         <div style="border:${border};flex:1;display:flex;flex-direction:column;">
-
-          <!-- Header: title 16→19px, company 9→12px -->
           <div style="border-bottom:${border};">
             <div style="padding:13px 20px;display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="flex-shrink:0;">
-                  ${logoHtml}
-                </div>
-                <div style="font-size:12px;color:#333;line-height:1.5;">
-                  <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
-                </div>
-              </div>
+              <div><div style="flex-shrink:0;">${logoHtml}</div><div style="font-size:12px;color:#333;line-height:1.5;"><div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div></div></div>
               <div style="font-size:19px;font-weight:700;">Terms &amp; Conditions</div>
             </div>
           </div>
-
-          <!-- Terms Content: 10→13px, padding 22px 26px, li margin 9px -->
-          <div style="flex:1;padding:22px 26px;font-size:13px;line-height:1.8;color:#222;">
-            <ol style="padding-left:20px;margin:0;">
-              ${termsAndConditions.map((t) => `<li style="margin-bottom:9px;padding-left:5px;">${t}</li>`).join("")}
-            </ol>
-          </div>
-
+          <div style="flex:1;padding:22px 26px;font-size:13px;line-height:1.8;color:#222;"><ol style="padding-left:20px;margin:0;">${termsAndConditions.map((t) => `<li style="margin-bottom:9px;padding-left:5px;">${t}</li>`).join("")}</ol></div>
           ${pageFooter()}
         </div>
       </div>
     </div>`;
-
-  // ═══ FULL DOCUMENT ══════════════════════════════════════
 
   return `<!DOCTYPE html>
 <html>
@@ -467,61 +289,17 @@ function buildProjectHTML(project: any): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      width: 210mm;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Lora', serif;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    @page {
-      size: A4;
-      margin: 0;
-    }
-
-    .pdf-page {
-      width: 210mm;
-      height: 297mm;
-      padding: 12mm;
-      margin: 0;
-      overflow: hidden;
-      box-sizing: border-box;
-      page-break-after: always;
-      page-break-inside: avoid;
-      position: relative;
-    }
-
-    .pdf-page:last-child {
-      page-break-after: auto;
-    }
-
-    img {
-      max-width: 100%;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-
-    table {
-      border-spacing: 0;
-    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 210mm; margin: 0; padding: 0; }
+    body { font-family: 'Lora', serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    @page { size: A4; margin: 0; }
+    .pdf-page { width: 210mm; height: 297mm; padding: 12mm; margin: 0; overflow: hidden; box-sizing: border-box; page-break-after: always; page-break-inside: avoid; position: relative; }
+    .pdf-page:last-child { page-break-after: auto; }
+    img { max-width: 100%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    table { border-spacing: 0; }
   </style>
 </head>
-<body>
-  ${page1}
-  ${productPages}
-  ${termsPage}
-</body>
+<body>${page1}${productPages}${termsPage}</body>
 </html>`;
 }
 
@@ -540,7 +318,9 @@ async function getBrowser(): Promise<Browser> {
         "--disable-dev-shm-usage",
         "--disable-gpu",
         "--font-render-hinting=none",
+        "--disable-web-security",
       ],
+      defaultViewport: { width: 1920, height: 1080 },
     });
   }
   return browserInstance;
@@ -555,39 +335,49 @@ export async function generateProjectPDF(project: any): Promise<string> {
   const pdfPath = path.join(PDF_DIR, `${project.id}.pdf`);
 
   let page: any = null;
-  try {
-    const browser = await getBrowser();
-    page = await browser.newPage();
+  let retryCount = 0;
+  const maxRetries = 3;
 
-    await page.setViewport({
-      width: 794,
-      height: 1123,
-      deviceScaleFactor: 1,
-    });
+  while (retryCount <= maxRetries) {
+    try {
+      const browser = await getBrowser();
+      page = await browser.newPage();
 
-    await page.setContent(html, {
-      waitUntil: "networkidle0",
-      timeout: 30_000,
-    });
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    await page.evaluateHandle("document.fonts.ready");
+      await page.setContent(html, {
+        waitUntil: ["domcontentloaded"],
+        timeout: 90_000, // Increased to 90 seconds
+      });
 
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
-    });
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      });
 
-    logger.info(`PDF generated → ${pdfPath}`);
-    return pdfPath;
-  } catch (err) {
-    logger.error("PDF generation failed:", err);
-    throw err;
-  } finally {
-    if (page) await page.close().catch(() => { });
+      logger.info(`PDF generated successfully → ${pdfPath} (retries: ${retryCount})`);
+      return pdfPath;
+    } catch (err: any) {
+      logger.error(`PDF generation attempt ${retryCount + 1} failed:`, err.message);
+      retryCount++;
+
+      if (retryCount > maxRetries) {
+        throw new Error(`PDF generation failed after ${maxRetries} retries: ${err.message}`);
+      }
+
+      await page?.close().catch(() => { });
+      page = null;
+
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.min(5000 * Math.pow(2, retryCount), 30000)));
+    }
   }
+
+  logger.info(`PDF generated → ${pdfPath}`);
+  return pdfPath;
 }
 
 export function getProjectPDFPath(projectId: string): string {
