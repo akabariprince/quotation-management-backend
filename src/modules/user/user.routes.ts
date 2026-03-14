@@ -5,10 +5,10 @@ import { validate } from '../../middleware/validate.middleware';
 import { authenticate, requirePermission } from '../../middleware/auth.middleware';
 import { createUserSchema, updateUserSchema } from './user.validation';
 import { PERMISSIONS } from '../../utils/permissions';
-import { asyncHandler } from '@/utils/asyncHandler';
+import { asyncHandler } from '../../utils/asyncHandler';
 import { Request, Response } from "express";
-import { Role, User } from '@/models';
-import { ApiResponse } from '@/utils/ApiResponse';
+import { Role, User } from '../../models';
+import { ApiResponse } from '../../utils/ApiResponse';
 const router = Router();
 
 router.use(authenticate);

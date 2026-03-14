@@ -297,7 +297,11 @@ export class AuthService {
     };
   }
 
-  async verifyOTPCode(email: string, otp: string, otpLogId: string) {
+  async verifyOTPCode(
+    email: string,
+    otp: string,
+    otpLogId: string
+  ): Promise<{ success: boolean; otpLog: OTPLog }> {
     const otpLog = await OTPLog.findOne({
       where: { id: otpLogId, email, status: "pending" },
     });
