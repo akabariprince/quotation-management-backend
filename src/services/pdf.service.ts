@@ -177,9 +177,17 @@ function buildProjectHTML(project: any): string {
           <span style="color:#666;min-width:95px;">Client name</span>
           <span style="font-weight:600;">${customer.name || ""}</span>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;margin-bottom:5px;">
           <span style="color:#666;min-width:95px;">Contact No</span>
           <span>${customer.mobile || ""}</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;">
+          <span style="color:#666;min-width:95px;">Project Name</span>
+          <span style="font-weight:600;">${project.projectName || "—"}</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span style="color:#666;min-width:95px;">Project No</span>
+          <span style="font-weight:600;">${project.projectNo || "—"}</span>
         </div>
       </div>
       <div style="width:170px;padding:11px 20px;font-size:13px;text-align:right;">
@@ -399,10 +407,10 @@ function buildProjectHTML(project: any): string {
                       <td style="padding:9px 13px;border-bottom:${borderThin};font-weight:700;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td>
                       <td style="padding:9px 13px;border-bottom:${borderThin};text-align:right;font-weight:700;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td>
                     </tr>
-                    <tr>
-                      <td style="padding:7px 13px;text-align:left;">Quotation</td>
-                      <td style="padding:7px 13px;text-align:right;font-weight:700;font-size:16px;">${index + 1}</td>
-                    </tr>
+                   <tr>
+                    <td style="padding:7px 13px;text-align:left;">Quotation No</td>
+                    <td style="padding:7px 13px;text-align:right;font-weight:700;font-size:14px;">${item.projectQuotationNo || index + 1}</td>
+                  </tr>
                   </tbody>
                 </table>
               </div>
