@@ -244,11 +244,14 @@ function buildProjectHTML(project: any): string {
     if (item.fabricName) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Fabric</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.fabricName}</td></tr>`; }
     if (item.quotation?.length) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Length</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.length} (mm)</td></tr>`; }
     if (item.quotation?.width) { descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;">Width</td><td style="padding:5px 13px;border-bottom:${borderThin};">: ${item.quotation.width} (mm)</td></tr>`; }
+    if (item.specialNote) {
+      descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};color:#555;vertical-align:top;">Special Note</td><td style="padding:5px 13px;border-bottom:${borderThin};color:#444;line-height:1.5;">: ${item.specialNote}</td></tr>`;
+    }
     descRows += `<tr><td colspan="2" style="padding:9px 13px;vertical-align:bottom;"><div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div><div style="font-weight:600;font-size:13px;">${salesPersonName}</div></td></tr>`;
 
     const imageHtml = imageSrc
-      ? `<img src="${imageSrc}" alt="${item.quotationName || ""}" style="max-height:400px;max-width:100%;width:auto;height:auto;object-fit:contain;display:block;" />`
-      : `<div style="color:#999;font-size:17px;text-align:center;padding:40px;">No Image Available</div>`;
+      ? `<img src="${imageSrc}" alt="${item.quotationName || ""}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+      : `<div style="color:#999;font-size:17px;text-align:center;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">No Image Available</div>`;
 
     return `
       <div class="pdf-page">
@@ -258,7 +261,7 @@ function buildProjectHTML(project: any): string {
             ${specialNoteHtml}
             ${clientInfoRow()}
             <div style="display:flex;border-bottom:${borderThin};"><div style="flex:1;padding:7px 13px;border-right:${borderThin};font-weight:600;font-size:13px;background-color:#f9f9f9;">${item.quotationName || "-"}</div><div style="display:flex;"><div style="padding:7px 13px;border-right:${borderThin};font-weight:700;font-size:13px;background-color:#f9f9f9;">CODE</div><div style="padding:7px 16px;font-weight:600;font-size:13px;">${item.quotationCode || ""}</div></div></div>
-            <div style="display:flex;align-items:center;justify-content:center;border-bottom:${borderThin};">${imageHtml}</div>
+            <div style="width:100%;aspect-ratio:16/9;overflow:hidden;border-bottom:${borderThin};">${imageHtml}</div>
             <div style="display:flex;border-bottom:${border};"><div style="width:50%;border-right:${border};font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody>${descRows}</tbody></table></div><div style="width:50%;font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody><tr><td style="padding:7px 13px;border-bottom:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr><tr><td style="padding:7px 13px;border-bottom:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr><tr><td style="padding:7px 13px;border-bottom:${borderThin};">Units</td><td style="padding:7px 13px;border-bottom:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr><tr style="background-color:#f9f9f9;"><td style="padding:9px 13px;border-bottom:${borderThin};font-weight:700;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:9px 13px;border-bottom:${borderThin};text-align:right;font-weight:700;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr><tr><td style="padding:7px 13px;text-align:left;">Quotation No</td><td style="padding:7px 13px;text-align:right;font-weight:700;font-size:14px;">${item.projectQuotationNo || index + 1}</td></tr></tbody></table></div></div>
             ${productPageFooter()}
           </div>

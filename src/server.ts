@@ -26,7 +26,7 @@ const startServer = async () => {
 
     // if (env.isDevelopment) {
     // ALTER mode: auto-updates columns, adds new ones, adjusts types
-    await sequelize.sync({ alter: true });
+    // await sequelize.sync({ alter: true });
     logger.info('✅ Database synced (alter mode - development)');
     // } else {
     //   // Production: only creates missing tables, never alters existing
