@@ -21,6 +21,7 @@ interface CustomerAttributes {
   deliveryState: string | null;
   deliveryPincode: string | null;
   deliverySameAsBilling: boolean;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -45,6 +46,7 @@ interface CustomerCreationAttributes
     | "deliveryState"
     | "deliveryPincode"
     | "deliverySameAsBilling"
+    | "createdBy"
     | "createdAt"
     | "updatedAt"
     | "deletedAt"
@@ -72,9 +74,12 @@ class Customer
   public deliveryState!: string | null;
   public deliveryPincode!: string | null;
   public deliverySameAsBilling!: boolean;
+  public createdBy!: string | null;
   public createdAt!: Date;
   public updatedAt!: Date;
   public deletedAt!: Date | null;
+
+  public creator?: any;
 }
 
 Customer.init(
@@ -129,6 +134,12 @@ Customer.init(
       allowNull: false,
       defaultValue: true,
       field: "delivery_same_as_billing",
+    },
+    createdBy: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: "created_by",
+      references: { model: "users", key: "id" },
     },
     createdAt: { type: DataTypes.DATE, field: "created_at" },
     updatedAt: { type: DataTypes.DATE, field: "updated_at" },

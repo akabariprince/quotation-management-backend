@@ -36,11 +36,11 @@ export class AuthController {
     res.json(ApiResponse.success(result, "Token refreshed successfully"));
   });
 
-  logout = asyncHandler(async (req: AuthRequest, res: Response) => {
+  logout = asyncHandler(async (req: any, res: Response) => {
     await authService.logout(req.user!.userId);
     res.json(ApiResponse.success(null, "Logged out successfully"));
   });
-  requestOTP = asyncHandler(async (req: AuthRequest, res: Response) => {
+  requestOTP = asyncHandler(async (req: any, res: Response) => {
     const { email, type, entityId, entityType, entityName, requestedBy } = req.body;
 
     const result = await authService.requestOTP(
@@ -60,12 +60,12 @@ export class AuthController {
     res.json(ApiResponse.success(result, "OTP verified successfully"));
   });
 
-  getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+  getProfile = asyncHandler(async (req: any, res: Response) => {
     const user = await authService.getProfile(req.user!.userId);
     res.json(ApiResponse.success(user));
   });
 
-  getLoginUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  getLoginUsers = asyncHandler(async (req: any, res: Response) => {
     const users = await authService.getLoginUsers();
     res.json(ApiResponse.success(users));
   });

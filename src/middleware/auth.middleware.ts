@@ -1,12 +1,12 @@
 // src/middleware/auth.middleware.ts
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt.utils';
 import { ApiError } from '../utils/ApiError';
 import { AuthRequest } from '../types';
 import { asyncHandler } from '../utils/asyncHandler';
 
 export const authenticate = asyncHandler(
-  async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  async (req: Request, _res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,7 +17,9 @@ export const authenticate = asyncHandler(
 
     try {
       const decoded = verifyAccessToken(token);
-      req.user = {
+      (req as any).user = {
+        id: decoded.userId,
+        name: decoded.email,
         userId: decoded.userId,
         email: decoded.email,
         roleId: decoded.roleId,
@@ -35,17 +37,18 @@ export const authenticate = asyncHandler(
 );
 
 export const requirePermission = (...requiredPermissions: string[]) => {
-  return (req: AuthRequest, _res: Response, next: NextFunction) => {
-    if (!req.user) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
       throw ApiError.unauthorized('Authentication required');
     }
 
-    if (req.user.roleName === 'admin') {
+    if (authReq.user.roleName === 'admin') {
       return next();
     }
 
     const hasPermission = requiredPermissions.every(
-      (perm) => req.user!.permissions.includes(perm)
+      (perm) => authReq.user!.permissions.includes(perm)
     );
 
     if (!hasPermission) {
@@ -59,17 +62,18 @@ export const requirePermission = (...requiredPermissions: string[]) => {
 };
 
 export const requireAnyPermission = (...requiredPermissions: string[]) => {
-  return (req: AuthRequest, _res: Response, next: NextFunction) => {
-    if (!req.user) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
       throw ApiError.unauthorized('Authentication required');
     }
 
-    if (req.user.roleName === 'admin') {
+    if (authReq.user.roleName === 'admin') {
       return next();
     }
 
     const hasAny = requiredPermissions.some(
-      (perm) => req.user!.permissions.includes(perm)
+      (perm) => authReq.user!.permissions.includes(perm)
     );
 
     if (!hasAny) {
@@ -81,14 +85,11 @@ export const requireAnyPermission = (...requiredPermissions: string[]) => {
 };
 
 export const authorize = (requiredRole: string) => {
-  return (req: AuthRequest, _res: Response, next: NextFunction) => {
-    if (!req.user) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
       throw ApiError.unauthorized('Authentication required');
     }
-    
-    // if (req.user.roleName !== requiredRole) {
-    //   throw ApiError.forbidden('Insufficient role permissions');
-    // }
 
     next();
   };

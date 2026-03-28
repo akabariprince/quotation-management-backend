@@ -1,8 +1,23 @@
 // src/types/index.ts
 import { Request } from 'express';
 
+// Override the Express.User to include our custom fields
+declare global {
+  namespace Express {
+    interface User {
+      userId: string;
+      email: string;
+      roleId: string;
+      roleName: string;
+      permissions: string[];
+    }
+  }
+}
+
 export interface AuthRequest extends Request {
   user?: {
+    id: string;
+    name: string;
     userId: string;
     email: string;
     roleId: string;

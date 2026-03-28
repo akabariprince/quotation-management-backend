@@ -137,6 +137,16 @@ CategoryNo.hasMany(Quotation, { as: "quotations", foreignKey: "categoryNoId" });
 // Quotation <-> Variant
 Quotation.belongsTo(Variant, { as: "variant", foreignKey: "variantId" });
 Variant.hasMany(Quotation, { as: "quotations", foreignKey: "variantId" });
+
+Customer.belongsTo(User, {
+  foreignKey: 'createdBy',
+  as: 'creator',
+});
+
+User.hasMany(Customer, {
+  foreignKey: 'createdBy',
+  as: 'customers',
+});
 export {
   sequelize,
   Role,
