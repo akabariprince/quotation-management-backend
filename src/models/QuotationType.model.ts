@@ -4,18 +4,13 @@ import sequelize from '../config/sequelize';
 interface QuotationTypeAttributes {
   id: string;
   name: string;
-  categoryId: string;
   status: 'pending' | 'active';
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }
 
 interface QuotationTypeCreationAttributes
-  extends Optional<
-    QuotationTypeAttributes,
-    'id' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
-  > {}
+  extends Optional<QuotationTypeAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
 
 class QuotationType
   extends Model<QuotationTypeAttributes, QuotationTypeCreationAttributes>
@@ -23,11 +18,9 @@ class QuotationType
 {
   public id!: string;
   public name!: string;
-  public categoryId!: string;
   public status!: 'pending' | 'active';
   public createdAt!: Date;
   public updatedAt!: Date;
-  public deletedAt!: Date | null;
 }
 
 QuotationType.init(
@@ -40,26 +33,27 @@ QuotationType.init(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
-    },
-    categoryId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      field: 'category_id',
+      unique: true,
     },
     status: {
       type: DataTypes.ENUM('pending', 'active'),
       allowNull: false,
       defaultValue: 'pending',
     },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
-    deletedAt: { type: DataTypes.DATE, field: 'deleted_at' },
+    createdAt: {
+      type: DataTypes.DATE,
+      field: 'created_at',
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      field: 'updated_at',
+    },
   },
   {
     sequelize,
     tableName: 'quotation_types',
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
     underscored: true,
   }
 );

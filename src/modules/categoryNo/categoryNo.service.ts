@@ -1,10 +1,13 @@
-import { BaseCrudService } from '../shared/baseCrud.service';
-import CategoryNo from '../../models/CategoryNo.model';
-import { Op, WhereOptions } from 'sequelize';
+import { Op, WhereOptions } from "sequelize";
+import { BaseCrudService } from "../shared/baseCrud.service";
+import CategoryNo from "../../models/CategoryNo.model";
+import Quotation from "../../models/Quotation.model";
+import { ApiError } from "../../utils/ApiError";
+import { quotationService } from "../quotation/quotation.service";
 
 class CategoryNoService extends BaseCrudService<CategoryNo> {
   constructor() {
-    super(CategoryNo, 'CategoryNo');
+    super(CategoryNo, "CategoryNo");
   }
 
   async findAll(query: any, additionalWhere?: WhereOptions, include?: any[]) {
@@ -12,9 +15,8 @@ class CategoryNoService extends BaseCrudService<CategoryNo> {
       page = 1,
       limit = 10,
       search,
-      sortBy = 'created_at',
-      sortOrder = 'DESC',
-      categoryId,
+      sortBy = "created_at",
+      sortOrder = "DESC",
       status,
     } = query;
 
@@ -24,18 +26,15 @@ class CategoryNoService extends BaseCrudService<CategoryNo> {
     if (search) {
       where[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }];
     }
-    if (categoryId) {
-      where.category_id = categoryId;
-    }
     if (status) {
       where.status = status;
     }
 
     const sortFieldMap: Record<string, string> = {
-      name: 'name',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      status: 'status',
+      name: "name",
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+      status: "status",
     };
     const actualSortBy = sortFieldMap[sortBy] || sortBy;
 
@@ -48,7 +47,6 @@ class CategoryNoService extends BaseCrudService<CategoryNo> {
     });
 
     const totalPages = Math.ceil(count / Number(limit));
-
     return {
       data: rows,
       meta: {
@@ -62,6 +60,59 @@ class CategoryNoService extends BaseCrudService<CategoryNo> {
         hasPreviousPage: Number(page) > 1,
       },
     };
+  }
+
+  async create(data: any) {
+    const trimmedName = data.name?.trim();
+    const existing = await CategoryNo.findOne({
+      where: { name: { [Op.iLike]: trimmedName } },
+    });
+    if (existing) {
+      throw ApiError.badRequest("A category no with this name already exists");
+    }
+    return super.create({ ...data, name: trimmedName });
+  }
+
+  async update(id: string, data: any) {
+    if (data.name) {
+      const trimmedName = data.name.trim();
+      const existing = await CategoryNo.findOne({
+        where: {
+          name: { [Op.iLike]: trimmedName },
+          id: { [Op.ne]: id },
+        },
+      });
+      if (existing) {
+        throw ApiError.badRequest(
+          "A category no with this name already exists"
+        );
+      }
+      data = { ...data, name: trimmedName };
+    }
+
+    const result = await super.update(id, data);
+
+    // Cascade: regenerate partCode in Quotations + ProjectItems
+    if (data.name) {
+      await quotationService.regeneratePartCodesForMaster(
+        "category_no_id",
+        id
+      );
+    }
+
+    return result;
+  }
+
+  async delete(id: string) {
+    const usedCount = await Quotation.count({
+      where: { categoryNoId: id },
+    });
+    if (usedCount > 0) {
+      throw ApiError.badRequest(
+        `Cannot delete: this category no is used in ${usedCount} product${usedCount > 1 ? "s" : ""}`
+      );
+    }
+    return super.delete(id);
   }
 }
 

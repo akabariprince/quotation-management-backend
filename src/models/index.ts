@@ -1,4 +1,3 @@
-// src/models/index.ts
 import sequelize from "../config/sequelize";
 import Role from "./Role.model";
 import User from "./User.model";
@@ -17,21 +16,12 @@ import EmailLog from "./EmailLog.model";
 import CategoryNo from "./CategoryNo.model";
 import Variant from "./Variant.model";
 import Setting from "./Setting.model";
+
 // Role -> User
 Role.hasMany(User, { foreignKey: "roleId", as: "users" });
 User.belongsTo(Role, { foreignKey: "roleId", as: "role" });
 
-// Category -> QuotationType (was ProductType)
-Category.hasMany(QuotationType, {
-  foreignKey: "categoryId",
-  as: "quotationTypes",
-});
-QuotationType.belongsTo(Category, {
-  foreignKey: "categoryId",
-  as: "category",
-});
-
-// QuotationType -> QuotationModel (was ProductType -> ProductModel)
+// QuotationType -> QuotationModel
 QuotationType.hasMany(QuotationModel, {
   foreignKey: "quotationTypeId",
   as: "quotationModels",
@@ -41,33 +31,37 @@ QuotationModel.belongsTo(QuotationType, {
   as: "quotationType",
 });
 
-// Quotation associations (was Product)
+// Quotation -> Category
 Quotation.belongsTo(Category, {
   foreignKey: "categoryId",
   as: "category",
-});
-Quotation.belongsTo(QuotationType, {
-  foreignKey: "quotationTypeId",
-  as: "quotationType",
-});
-Quotation.belongsTo(QuotationModel, {
-  foreignKey: "quotationModelId",
-  as: "quotationModel",
 });
 Category.hasMany(Quotation, {
   foreignKey: "categoryId",
   as: "quotations",
 });
+
+// Quotation -> QuotationType
+Quotation.belongsTo(QuotationType, {
+  foreignKey: "quotationTypeId",
+  as: "quotationType",
+});
 QuotationType.hasMany(Quotation, {
   foreignKey: "quotationTypeId",
   as: "quotations",
+});
+
+// Quotation -> QuotationModel
+Quotation.belongsTo(QuotationModel, {
+  foreignKey: "quotationModelId",
+  as: "quotationModel",
 });
 QuotationModel.hasMany(Quotation, {
   foreignKey: "quotationModelId",
   as: "quotations",
 });
 
-// Quotation -> Wood, Polish, Fabric (was Product -> Wood, Polish, Fabric)
+// Quotation -> Wood, Polish, Fabric
 Quotation.belongsTo(Wood, { foreignKey: "woodId", as: "wood" });
 Wood.hasMany(Quotation, { foreignKey: "woodId", as: "quotations" });
 
@@ -77,15 +71,29 @@ Polish.hasMany(Quotation, { foreignKey: "polishId", as: "quotations" });
 Quotation.belongsTo(Fabric, { foreignKey: "fabricId", as: "fabric" });
 Fabric.hasMany(Quotation, { foreignKey: "fabricId", as: "quotations" });
 
-// Project -> Customer (was Quotation -> Customer)
+// Quotation -> CategoryNo
+Quotation.belongsTo(CategoryNo, {
+  as: "categoryNo",
+  foreignKey: "categoryNoId",
+});
+CategoryNo.hasMany(Quotation, {
+  as: "quotations",
+  foreignKey: "categoryNoId",
+});
+
+// Quotation -> Variant
+Quotation.belongsTo(Variant, { as: "variant", foreignKey: "variantId" });
+Variant.hasMany(Quotation, { as: "quotations", foreignKey: "variantId" });
+
+// Project -> Customer
 Project.belongsTo(Customer, { foreignKey: "customerId", as: "customer" });
 Customer.hasMany(Project, { foreignKey: "customerId", as: "projects" });
 
-// Project -> User (salesPerson) (was Quotation -> User)
+// Project -> User (salesPerson)
 Project.belongsTo(User, { foreignKey: "salesPersonId", as: "salesPerson" });
 User.hasMany(Project, { foreignKey: "salesPersonId", as: "projects" });
 
-// Project -> ProjectItem (was Quotation -> QuotationItem)
+// Project -> ProjectItem
 Project.hasMany(ProjectItem, {
   foreignKey: "projectId",
   as: "items",
@@ -96,8 +104,7 @@ ProjectItem.belongsTo(Project, {
   as: "project",
 });
 
-// ProjectItem associations (was QuotationItem)
-// ProjectItem -> Quotation (was QuotationItem -> Product)
+// ProjectItem -> Quotation
 ProjectItem.belongsTo(Quotation, {
   foreignKey: "quotationId",
   as: "quotation",
@@ -123,30 +130,17 @@ OTPLog.belongsTo(User, { foreignKey: "approvedBy", as: "approver" });
 
 // EmailLog -> User
 EmailLog.belongsTo(User, { foreignKey: "sentBy", as: "sender" });
-// CategoryNo <-> Category
-Category.hasMany(CategoryNo, { as: "categoryNos", foreignKey: "categoryId" });
-CategoryNo.belongsTo(Category, { as: "category", foreignKey: "categoryId" });
 
-// Quotation <-> CategoryNo
-Quotation.belongsTo(CategoryNo, {
-  as: "categoryNo",
-  foreignKey: "categoryNoId",
-});
-CategoryNo.hasMany(Quotation, { as: "quotations", foreignKey: "categoryNoId" });
-
-// Quotation <-> Variant
-Quotation.belongsTo(Variant, { as: "variant", foreignKey: "variantId" });
-Variant.hasMany(Quotation, { as: "quotations", foreignKey: "variantId" });
-
+// Customer -> User (creator)
 Customer.belongsTo(User, {
-  foreignKey: 'createdBy',
-  as: 'creator',
+  foreignKey: "createdBy",
+  as: "creator",
+});
+User.hasMany(Customer, {
+  foreignKey: "createdBy",
+  as: "customers",
 });
 
-User.hasMany(Customer, {
-  foreignKey: 'createdBy',
-  as: 'customers',
-});
 export {
   sequelize,
   Role,

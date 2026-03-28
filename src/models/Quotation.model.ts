@@ -199,7 +199,7 @@ Quotation.init(
     timestamps: true,
     paranoid: true,
     underscored: true,
-  },
+  }
 );
 
 export default Quotation;

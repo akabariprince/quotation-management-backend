@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createQuotationSchema = z.object({
   body: z.object({
-    name: z.string().min(1, "Quotation name is required").max(255),
+    name: z.string().min(0, "Quotation name is required").max(255),
     partCode: z.string().min(1, "Part code is required").max(50),
     categoryId: z.string().uuid("Invalid category ID"),
     categoryNoId: z

@@ -7,11 +7,10 @@ interface CategoryAttributes {
   status: 'pending' | 'active';
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }
 
 interface CategoryCreationAttributes
-  extends Optional<CategoryAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'> {}
+  extends Optional<CategoryAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
 
 class Category
   extends Model<CategoryAttributes, CategoryCreationAttributes>
@@ -22,7 +21,6 @@ class Category
   public status!: 'pending' | 'active';
   public createdAt!: Date;
   public updatedAt!: Date;
-  public deletedAt!: Date | null;
 }
 
 Category.init(
@@ -35,6 +33,7 @@ Category.init(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      unique: true,
     },
     status: {
       type: DataTypes.ENUM('pending', 'active'),
@@ -49,16 +48,12 @@ Category.init(
       type: DataTypes.DATE,
       field: 'updated_at',
     },
-    deletedAt: {
-      type: DataTypes.DATE,
-      field: 'deleted_at',
-    },
   },
   {
     sequelize,
     tableName: 'categories',
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
     underscored: true,
   }
 );

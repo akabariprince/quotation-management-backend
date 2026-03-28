@@ -1,29 +1,26 @@
-import { DataTypes, Model, Optional } from "sequelize";
-import sequelize from "../config/sequelize";
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../config/sequelize';
 
 interface VariantAttributes {
   id: string;
   name: string;
-  status: "pending" | "active";
+  status: 'pending' | 'active';
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
 }
 
-interface VariantCreationAttributes extends Optional<
-  VariantAttributes,
-  "id" | "status" | "createdAt" | "updatedAt" | "deletedAt"
-> { }
+interface VariantCreationAttributes
+  extends Optional<VariantAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
 
 class Variant
   extends Model<VariantAttributes, VariantCreationAttributes>
-  implements VariantAttributes {
+  implements VariantAttributes
+{
   public id!: string;
   public name!: string;
-  public status!: "pending" | "active";
+  public status!: 'pending' | 'active';
   public createdAt!: Date;
   public updatedAt!: Date;
-  public deletedAt!: Date | null;
 }
 
 Variant.init(
@@ -36,32 +33,29 @@ Variant.init(
     name: {
       type: DataTypes.STRING(100),
       allowNull: false,
+      unique: true,
     },
     status: {
-      type: DataTypes.ENUM("pending", "active"),
+      type: DataTypes.ENUM('pending', 'active'),
       allowNull: false,
-      defaultValue: "pending",
+      defaultValue: 'pending',
     },
     createdAt: {
       type: DataTypes.DATE,
-      field: "created_at",
+      field: 'created_at',
     },
     updatedAt: {
       type: DataTypes.DATE,
-      field: "updated_at",
-    },
-    deletedAt: {
-      type: DataTypes.DATE,
-      field: "deleted_at",
+      field: 'updated_at',
     },
   },
   {
     sequelize,
-    tableName: "variants",
+    tableName: 'variants',
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
     underscored: true,
-  },
+  }
 );
 
 export default Variant;
