@@ -1,7 +1,7 @@
 {
-  "name": "furniture-quotation-backend",
+  "name": "ecstatics-quotation-management-backend",
   "version": "1.0.0",
-  "description": "Production-ready backend for Furniture Quotation Management",
+  "description": "Production-ready backend for Ecstatics Quotation Management System",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/server.ts",
