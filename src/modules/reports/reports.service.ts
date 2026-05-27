@@ -510,7 +510,18 @@ class ReportsService {
 
       const projects = await Project.findAll({
         where: projectWhere,
-        include: [{ model: ProjectItem, as: "items" }, salesPersonInclude],
+        include: [
+          {
+            model: ProjectItem,
+            as: "items",
+            include: [
+              { model: Wood, as: "wood", attributes: ["name"], required: false },
+              { model: Polish, as: "polish", attributes: ["name"], required: false },
+              { model: Fabric, as: "fabric", attributes: ["name"], required: false },
+            ],
+          },
+          salesPersonInclude,
+        ],
         order: [["date", "DESC"]],
       });
 
@@ -567,9 +578,9 @@ class ReportsService {
           amount: Number(item.totalWithGst) || 0,
           basePrice: Number(item.basePrice) || 0,
           discountPercent: Number(item.discountPercent) || 0,
-          wood: item.woodName,
-          polish: item.polishName,
-          fabric: item.fabricName,
+          wood: item.wood?.name || item.woodName || null,
+          polish: item.polish?.name || item.polishName || null,
+          fabric: item.fabric?.name || item.fabricName || null,
         })),
       }));
 
