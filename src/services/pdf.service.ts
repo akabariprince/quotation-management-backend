@@ -332,7 +332,7 @@ function buildProjectHTML(project: any): string {
         <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
         <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">Units</td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr>
         <tr style="background-color:#f9f9f9;"><td style="padding:9px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:9px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr>
-        <tr><td style="padding:7px 13px;border-right:${borderThin};text-align:left;">Quotation No</td><td style="padding:7px 13px;border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${item.projectQuotationNo || index + 1}</td></tr>
+        <tr><td style="padding:7px 13px;border-right:${borderThin};text-align:left;">Quotation No</td><td style="padding:7px 13px;border-right:${borderThin};text-align:left;font-weight:600;font-size:14px;">${item.projectQuotationNo || index + 1}</td></tr>
       `;
 
       return `
