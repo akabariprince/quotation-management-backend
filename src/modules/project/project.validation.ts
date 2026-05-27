@@ -3,18 +3,30 @@ import { z } from "zod";
 const numField = z.union([z.number(), z.string()]).transform(Number);
 const numFieldDefault0 = numField.default(0);
 
+// ✅ Selection value schema
+const selectionValueSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().optional(),
+  value: z.string(),
+});
+
+// ✅ Selection schema
+const selectionSchema = z.object({
+  selectionId: z.string().uuid(),
+  selectionName: z.string(),
+  selectionCode: z.string(),
+  values: z.array(selectionValueSchema).min(1),
+});
+
+// ✅ Project item schema
 const projectItemSchema = z.object({
   quotationId: z.string().uuid(),
   quotationCode: z.string(),
   quotationName: z.string(),
   description: z.string().nullable().optional(),
   images: z.array(z.string()).optional().default([]),
-  woodId: z.string().uuid().nullable().optional(),
-  woodName: z.string().nullable().optional(),
-  polishId: z.string().uuid().nullable().optional(),
-  polishName: z.string().nullable().optional(),
-  fabricId: z.string().uuid().nullable().optional(),
-  fabricName: z.string().nullable().optional(),
+  selections: z.array(selectionSchema).optional().nullable(),
+  selectedVariantId: z.string().uuid().nullable().optional(),
   basePrice: numField,
   discountPercent: numFieldDefault0,
   discountAmount: numFieldDefault0,
@@ -27,11 +39,12 @@ const projectItemSchema = z.object({
   sgst: numFieldDefault0,
   totalWithGst: numField,
   notes: z.array(z.string()).optional().default([]),
-  specialNote: z.string().optional(),
+  specialNote: z.string().nullable().optional(),
 });
 
-// Schema WITHOUT body wrapper
+// ✅ Create project body schema
 const createProjectBody = z.object({
+  projectNo: z.string().optional(), // ← Allow frontend to pass custom projectNo
   date: z.string(),
   customerId: z.string().uuid(),
   salesPersonId: z.string().uuid().nullable().optional(),
@@ -41,48 +54,45 @@ const createProjectBody = z.object({
   cgst: numFieldDefault0,
   sgst: numFieldDefault0,
   grandTotal: numFieldDefault0,
-  grandTotalWithGst: z
-    .union([z.number(), z.string(), z.null()])
-    .transform((v) => Number(v) || 0)
-    .default(0),
+  grandTotalWithGst: numFieldDefault0,
   projectName: z.string().max(255).optional(),
-  deliveryAddress: z.string().optional(),
-  deliveryLandmark: z.string().max(255).optional(),
-  deliveryCity: z.string().max(100).optional(),
-  deliveryState: z.string().max(100).optional(),
-  deliveryPincode: z.string().max(10).optional(),
+  deliveryAddress: z.string().nullable().optional(),
+  deliveryLandmark: z.string().max(255).nullable().optional(),
+  deliveryCity: z.string().max(100).nullable().optional(),
+  deliveryState: z.string().max(100).nullable().optional(),
+  deliveryPincode: z.string().max(10).nullable().optional(),
   status: z.enum(["draft", "sent", "approved", "expired"]).default("draft"),
   items: z.array(projectItemSchema).min(1, "At least one item is required"),
 });
 
-const updateProjectBody = z.object({
-  date: z.string().optional(),
-  customerId: z.string().uuid().optional(),
-  salesPersonId: z.string().uuid().nullable().optional(),
-  subtotal: z.union([z.number(), z.string()]).transform(Number).optional(),
-  totalDiscount: z.union([z.number(), z.string()]).transform(Number).optional(),
-  igst: z.union([z.number(), z.string()]).transform(Number).optional(),
-  cgst: z.union([z.number(), z.string()]).transform(Number).optional(),
-  sgst: z.union([z.number(), z.string()]).transform(Number).optional(),
-  grandTotal: z.union([z.number(), z.string()]).transform(Number).optional(),
-  grandTotalWithGst: z
-    .union([z.number(), z.string(), z.null()])
-    .transform((v) => Number(v) || 0)
-    .optional(),
-  status: z.enum(["draft", "sent", "approved", "expired"]).optional(),
-  items: z.array(projectItemSchema).optional(),
-});
+// ✅ Update project body schema (all fields optional)
+const updateProjectBody = createProjectBody.partial();
 
+// ✅ Update status body schema
 const updateStatusBody = z.object({
   status: z.enum(["draft", "sent", "approved", "expired"]),
 });
 
-// Export BOTH formats
-export const createProjectSchema = z.object({ body: createProjectBody });
-export const updateProjectSchema = z.object({ body: updateProjectBody });
-export const updateProjectStatusSchema = z.object({ body: updateStatusBody });
+// ✅ Export wrapped schemas (for validation middleware)
+export const createProjectSchema = z.object({ 
+  body: createProjectBody,
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+});
 
-// Also export raw body schemas
+export const updateProjectSchema = z.object({ 
+  body: updateProjectBody,
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
+export const updateProjectStatusSchema = z.object({ 
+  body: updateStatusBody,
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({}).optional(),
+});
+
+// ✅ Also export raw body schemas (for direct use)
 export const createProjectBodySchema = createProjectBody;
 export const updateProjectBodySchema = updateProjectBody;
 export const updateProjectStatusBodySchema = updateStatusBody;

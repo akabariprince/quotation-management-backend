@@ -9,6 +9,7 @@ import Quotation from "../../models/Quotation.model";
 import Wood from "../../models/Wood.model";
 import Polish from "../../models/Polish.model";
 import Fabric from "../../models/Fabric.model";
+import Variant from "../../models/Variant.model";
 import { ApiError } from "../../utils/ApiError";
 import {
   parsePagination,
@@ -68,6 +69,7 @@ const projectIncludes: Includeable[] = [
       { model: Wood, as: "wood", attributes: ["id", "name"] },
       { model: Polish, as: "polish", attributes: ["id", "name"] },
       { model: Fabric, as: "fabric", attributes: ["id", "name"] },
+      { model: Variant, as: "selectedVariant", attributes: ["id", "name"] },
     ],
     order: [["sort_order", "ASC"]],
   },
@@ -356,60 +358,58 @@ class ProjectService {
   }
 
   // ────────────────────────────────────────────────────────
-  async duplicate(id: string) {
-    const original = await this.findById(id);
-    if (!original) throw ApiError.notFound("Project not found");
+async duplicate(id: string) {
+  const original = await this.findById(id);
+  if (!original) throw ApiError.notFound("Project not found");
 
-    const data = {
-      date: new Date().toISOString().split("T")[0],
-      customerId: original.customerId,
-      projectName: original.projectName,
-      salesPersonId: original.salesPersonId,
-      deliveryAddress: (original as any).deliveryAddress,
-      deliveryLandmark: (original as any).deliveryLandmark,
-      deliveryCity: (original as any).deliveryCity,
-      deliveryState: (original as any).deliveryState,
-      deliveryPincode: (original as any).deliveryPincode,
-      subtotal: original.subtotal,
-      totalDiscount: original.totalDiscount,
-      igst: original.igst,
-      cgst: original.cgst,
-      sgst: original.sgst,
-      grandTotal: original.grandTotal,
-      grandTotalWithGst: original.grandTotalWithGst,
-      status: "draft" as const,
-      items:
-        original.items?.map((item: any) => ({
-          quotationId: item.quotationId,
-          quotationCode: item.quotationCode,
-          quotationName: item.quotationName,
-          description: item.description,
-          images: item.images,
-          woodId: item.woodId,
-          woodName: item.woodName,
-          polishId: item.polishId,
-          polishName: item.polishName,
-          fabricId: item.fabricId,
-          fabricName: item.fabricName,
-          basePrice: item.basePrice,
-          discountPercent: item.discountPercent,
-          discountAmount: item.discountAmount,
-          finalPrice: item.finalPrice,
-          quantity: item.quantity,
-          total: item.total,
-          gstPercent: item.gstPercent,
-          igst: item.igst,
-          cgst: item.cgst,
-          sgst: item.sgst,
-          totalWithGst: item.totalWithGst,
-          notes: item.notes,
-          specialNote: item.specialNote || null,
-        })) || [],
-    };
+  const data = {
+    date: new Date().toISOString().split("T")[0],
+    customerId: original.customerId,
+    projectName: original.projectName,
+    salesPersonId: original.salesPersonId,
+    deliveryAddress: (original as any).deliveryAddress,
+    deliveryLandmark: (original as any).deliveryLandmark,
+    deliveryCity: (original as any).deliveryCity,
+    deliveryState: (original as any).deliveryState,
+    deliveryPincode: (original as any).deliveryPincode,
+    subtotal: original.subtotal,
+    totalDiscount: original.totalDiscount,
+    igst: original.igst,
+    cgst: original.cgst,
+    sgst: original.sgst,
+    grandTotal: original.grandTotal,
+    grandTotalWithGst: original.grandTotalWithGst,
+    status: "draft" as const,
+    items:
+      original.items?.map((item: any) => ({
+        quotationId: item.quotationId,
+        quotationCode: item.quotationCode,
+        quotationName: item.quotationName,
+        description: item.description,
+        images: item.images,
+        
+        // ✅ Copy dynamic selections
+        selections: item.selections || null,
+        
+        selectedVariantId: item.selectedVariantId,
+        basePrice: item.basePrice,
+        discountPercent: item.discountPercent,
+        discountAmount: item.discountAmount,
+        finalPrice: item.finalPrice,
+        quantity: item.quantity,
+        total: item.total,
+        gstPercent: item.gstPercent,
+        igst: item.igst,
+        cgst: item.cgst,
+        sgst: item.sgst,
+        totalWithGst: item.totalWithGst,
+        notes: item.notes,
+        specialNote: item.specialNote || null,
+      })) || [],
+  };
 
-    // create() already triggers PDF generation
-    return this.create(data);
-  }
+  return this.create(data);
+}
 
   // ────────────────────────────────────────────────────────
   //  Get PDF path (used by controller for download)

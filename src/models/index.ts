@@ -16,6 +16,9 @@ import EmailLog from "./EmailLog.model";
 import CategoryNo from "./CategoryNo.model";
 import Variant from "./Variant.model";
 import Setting from "./Setting.model";
+import Selection from "./Selection.model";
+import SelectionVariantMapping from "./SelectionVariantMapping.model";
+import SelectionValue from "./SelectionValue.model";
 
 // Role -> User
 Role.hasMany(User, { foreignKey: "roleId", as: "users" });
@@ -85,6 +88,35 @@ CategoryNo.hasMany(Quotation, {
 Quotation.belongsTo(Variant, { as: "variant", foreignKey: "variantId" });
 Variant.hasMany(Quotation, { as: "quotations", foreignKey: "variantId" });
 
+// Selection -> Variant mappings
+Selection.hasMany(SelectionVariantMapping, {
+  foreignKey: "selectionId",
+  as: "variantMappings",
+  onDelete: "CASCADE",
+});
+SelectionVariantMapping.belongsTo(Selection, {
+  foreignKey: "selectionId",
+  as: "selection",
+});
+Variant.hasMany(SelectionVariantMapping, {
+  foreignKey: "variantId",
+  as: "selectionMappings",
+});
+SelectionVariantMapping.belongsTo(Variant, {
+  foreignKey: "variantId",
+  as: "variant",
+});
+
+Selection.hasMany(SelectionValue, {
+  foreignKey: "selectionId",
+  as: "values",
+  onDelete: "CASCADE",
+});
+SelectionValue.belongsTo(Selection, {
+  foreignKey: "selectionId",
+  as: "selection",
+});
+
 // Project -> Customer
 Project.belongsTo(Customer, { foreignKey: "customerId", as: "customer" });
 Customer.hasMany(Project, { foreignKey: "customerId", as: "projects" });
@@ -124,6 +156,15 @@ Polish.hasMany(ProjectItem, { foreignKey: "polishId", as: "projectItems" });
 ProjectItem.belongsTo(Fabric, { foreignKey: "fabricId", as: "fabric" });
 Fabric.hasMany(ProjectItem, { foreignKey: "fabricId", as: "projectItems" });
 
+ProjectItem.belongsTo(Variant, {
+  foreignKey: "selectedVariantId",
+  as: "selectedVariant",
+});
+Variant.hasMany(ProjectItem, {
+  foreignKey: "selectedVariantId",
+  as: "selectedProjectItems",
+});
+
 // OTPLog -> User
 OTPLog.belongsTo(User, { foreignKey: "requestedBy", as: "requester" });
 OTPLog.belongsTo(User, { foreignKey: "approvedBy", as: "approver" });
@@ -160,4 +201,7 @@ export {
   CategoryNo,
   Variant,
   Setting,
+  Selection,
+  SelectionVariantMapping,
+  SelectionValue,
 };

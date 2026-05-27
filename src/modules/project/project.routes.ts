@@ -1,5 +1,3 @@
-// src/modules/project/project.routes.ts
-
 import { Router } from "express";
 import { projectController } from "./project.controller";
 import { validate } from "../../middleware/validate.middleware";
@@ -18,68 +16,77 @@ const router = Router();
 
 router.use(authenticate);
 
+// ✅ GET routes - NO validation needed
 router.get(
   "/stats",
   requirePermission(PERMISSIONS.PROJECT_VIEW),
-  projectController.getStats,
+  projectController.getStats
 );
+
 router.get(
   "/next-number",
   requirePermission(PERMISSIONS.PROJECT_CREATE),
-  projectController.getNextNumber,
+  projectController.getNextNumber
 );
 
 router.get(
   "/",
   requirePermission(PERMISSIONS.PROJECT_VIEW),
-  projectController.getAll,
+  projectController.getAll
 );
+
 router.get(
   "/:id",
   requirePermission(PERMISSIONS.PROJECT_VIEW),
-  projectController.getById,
+  projectController.getById
 );
 
+// ✅ POST/PUT/PATCH routes - WITH validation
 router.post(
   "/",
   requirePermission(PERMISSIONS.PROJECT_CREATE),
   validate(createProjectSchema),
-  projectController.create,
+  projectController.create
 );
+
 router.put(
   "/:id",
   requirePermission(PERMISSIONS.PROJECT_EDIT),
   validate(updateProjectSchema),
-  projectController.update,
+  projectController.update
 );
+
 router.patch(
   "/:id/status",
   requirePermission(PERMISSIONS.PROJECT_EDIT),
   validate(updateProjectStatusSchema),
-  projectController.updateStatus,
+  projectController.updateStatus
 );
+
 router.delete(
   "/:id",
   requirePermission(PERMISSIONS.PROJECT_DELETE),
-  projectController.delete,
+  projectController.delete
 );
+
 router.post(
   "/:id/duplicate",
   requirePermission(PERMISSIONS.PROJECT_CREATE),
-  projectController.duplicate,
+  projectController.duplicate
 );
+
 router.post("/:id/send-email", projectController.sendEmail);
 
 router.get(
   "/:id/pdf",
   requirePermission(PERMISSIONS.PROJECT_VIEW),
-  projectController.downloadPDF,
+  projectController.downloadPDF
 );
 
 router.post(
   "/:id/regenerate-pdf",
   requirePermission(PERMISSIONS.PROJECT_EDIT),
-  projectController.regeneratePDF,
+  projectController.regeneratePDF
 );
 
 export default router;

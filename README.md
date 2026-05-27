@@ -105,3 +105,20 @@ For testing and demonstration, the following accounts are typically seeded (all 
 ---
 
 Feel free to reach out if you have any questions regarding the backend architecture or deployment process!
+
+
+
+Then manually add the missing column
+
+Open PostgreSQL and run:
+
+ALTER TABLE "project_items"
+ADD COLUMN "projectId" UUID;
+
+Then:
+
+ALTER TABLE "project_items"
+ADD CONSTRAINT "project_items_projectId_fkey"
+FOREIGN KEY ("projectId")
+REFERENCES "projects"("id")
+ON DELETE CASCADE;

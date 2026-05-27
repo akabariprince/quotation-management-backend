@@ -29,6 +29,7 @@ import reportsRoutes from './modules/reports/reports.routes';
 import categoryNoRoutes from './modules/categoryNo/categoryNo.routes';
 import variantRoutes from './modules/variant/variant.routes';
 import settingRoutes from './modules/setting/setting.routes';
+import selectionRoutes from './modules/selection/selection.routes';
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use('/api/otp-logs', otpRoutes);
 app.use('/api/email-logs', emailLogRoutes);
 app.use('/api/category-nos', categoryNoRoutes);
 app.use('/api/variants', variantRoutes);
+app.use('/api/selections', selectionRoutes);
 app.use('/api/settings', settingRoutes);
 
 // Static file serving for uploads
@@ -117,6 +119,7 @@ app.use(
   "/uploads/pdfs",
   express.static(path.join(process.cwd(), "uploads", "pdfs")),
 );
+
 // Error handlers
 app.use(notFoundHandler);
 app.use(errorHandler);
