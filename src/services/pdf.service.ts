@@ -266,7 +266,7 @@ function buildProjectHTML(project: any): string {
       </div>
     </div>`;
 
-  // ═══ PRODUCT DETAIL PAGES - FIXED LAYOUT ═══
+  // ═══ PRODUCT DETAIL PAGES ═══
   const productPages = items
     .map((item: any, index: number) => {
       const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
@@ -284,16 +284,16 @@ function buildProjectHTML(project: any): string {
         mergedSelections.forEach((sel, selIdx) => {
           sel.values.forEach((value, idx) => {
             if (idx === 0) {
-              selectionRows += `<tr><td rowspan="${sel.values.length}" style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:60px;vertical-align:top;">${sel.label}</td><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${value}</td></tr>`;
+              selectionRows += `<tr><td rowspan="${sel.values.length}" style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:60px;vertical-align:top;">${sel.label}</td><td style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};">${value}</td></tr>`;
             } else {
-              selectionRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${value}</td></tr>`;
+              selectionRows += `<tr><td style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};">${value}</td></tr>`;
             }
           });
         });
 
-        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr>${selectionRows}</tbody></table>`;
+        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:7px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr>${selectionRows}</tbody></table>`;
       } else {
-        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr><tr><td colspan="2" style="padding:5px 13px;color:#777;font-size:12px;border-right:${borderThin};">No selections selected</td></tr></tbody></table>`;
+        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:7px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr><tr><td colspan="2" style="padding:6px 13px;color:#777;font-size:12px;border-bottom:${borderThin};border-right:${borderThin};">No selections selected</td></tr></tbody></table>`;
       }
 
       // ─── Description Table ───
@@ -317,72 +317,83 @@ function buildProjectHTML(project: any): string {
         });
 
       descData.forEach((data, idx) => {
-        descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:110px;">${data.label}</td><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${data.value}</td></tr>`;
+        descRows += `<tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:90px;">${data.label}</td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">${data.value}</td></tr>`;
       });
 
       const specialNoteHtml = item.specialNote
         ? `<div style="font-size:12px;color:#666;margin-top:5px;"><span style="font-weight:600;font-size:13px;">Special Note: </span><span style="color:#333;">${item.specialNote}</span></div>`
         : "";
 
-      descRows += `<tr><td colspan="2" style="padding:9px 13px;vertical-align:bottom;border-right:${borderThin};">${specialNoteHtml}<div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div><div style="font-weight:600;font-size:13px;">${salesPersonName}</div></td></tr>`;
+      if (specialNoteHtml) {
+        descRows += `<tr><td colspan="2" style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};">${specialNoteHtml}</td></tr>`;
+      }
 
       // ─── Pricing Table ───
       const pricingRows = `
-        <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr>
-        <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
-        <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">Units</td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr>
-        <tr style="background-color:#f9f9f9;"><td style="padding:9px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:9px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr>
-        <tr><td style="padding:7px 13px;border-right:${borderThin};text-align:left;">Quotation No</td><td style="padding:7px 5px;border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${item.projectQuotationNo || index + 1}</td></tr>
-      `;
+      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr>
+      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
+      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};">Units</td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr>
+      <tr style="background-color:#f9f9f9;"><td style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr>
+      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Quotation No</td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:left;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.projectQuotationNo || index + 1}</td></tr>
+    `;
 
       return `
-      <div class="pdf-page">
-        <div style="height:100%;display:flex;flex-direction:column;">
-          <div style="border:${border};flex:1;display:flex;flex-direction:column;">
-            ${companyHeader()}
-            ${clientInfoRow()}
-            <div style="display:flex;border-bottom:${border};">
-              <div style="flex:1;padding:7px 13px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
-              <div style="width:170px;min-width:170px;display:flex;">
-                <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;text-align:center;">CODE</div>
-                <div style="flex:1;padding:7px 7px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
-              </div>
+    <div class="pdf-page">
+      <div style="height:100%;display:flex;flex-direction:column;">
+        <div style="border:${border};display:flex;flex-direction:column;">
+          ${companyHeader()}
+          ${clientInfoRow()}
+          
+          <div style="display:flex;border-bottom:${border};">
+            <div style="flex:1;padding:7px 13px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
+            <div style="width:170px;min-width:170px;display:flex;">
+              <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;text-align:center;">CODE</div>
+              <div style="flex:1;padding:7px 7px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
             </div>
-            
-            <div style="display:flex;border-bottom:${border};">
-              <!-- LEFT COLUMN: Image + Description (60%) -->
-              <div style="width:60%;border-right:${border};">
-                <!-- Image Section -->
-                <div style="border-bottom:${border};">
-                  ${imageHtml}
-                </div>
-                <!-- Description Table -->
-                <div style="font-size:13px;">
-                  <table style="width:100%;border-collapse:collapse;">
-                    <tbody>${descRows}</tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- RIGHT COLUMN: Selections + Pricing (40%) -->
-              <div style="width:40%;">
-                <!-- Selections Table -->
-                <div style="border-bottom:${border};font-size:13px;">
-                  ${selectionsTableHtml}
-                </div>
-                <!-- Pricing Table -->
-                <div style="font-size:13px;">
-                  <table style="width:100%;border-collapse:collapse;">
-                    <tbody>${pricingRows}</tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            ${productPageFooter()}
           </div>
+          
+          <div style="display:flex;border-bottom:${border};">
+            <!-- LEFT COLUMN: Image + Description (60%) -->
+            <div style="width:60%;border-right:${border};display:flex;flex-direction:column;">
+              <!-- Image Section -->
+              <div style="border-bottom:${border};">
+                ${imageHtml}
+              </div>
+              
+              <!-- Description Table -->
+              <div style="font-size:13px;">
+                <table style="width:100%;border-collapse:collapse;">
+                  <tbody>${descRows}</tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Selections + Pricing (40%) -->
+            <div style="width:40%;display:flex;flex-direction:column;">
+              <!-- Selections Table -->
+              <div style="border-bottom:${border};font-size:13px;">
+                ${selectionsTableHtml}
+              </div>
+              
+              <!-- Pricing Table -->
+              <div style="font-size:13px;">
+                <table style="width:100%;border-collapse:collapse;">
+                  <tbody>${pricingRows}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-bottom:${border};display:flex;">
+            <div style="flex:1;padding:13px 20px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="font-size:12px;color:#666;">Sales Manager</div>
+              <div style="font-size:14px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
+            </div>
+          </div>
+          ${pageFooter()}
         </div>
-      </div>`;
+      </div>
+    </div>`;
     })
     .join("");
 
@@ -410,7 +421,7 @@ function buildProjectHTML(project: any): string {
     html, body { width: 210mm; margin: 0; padding: 0; }
     body { font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { size: A4; margin: 0; }
-    .pdf-page { width: 210mm; height: 297mm; padding: 12mm; margin: 0; overflow: hidden; box-sizing: border-box; page-break-after: always; page-break-inside: avoid; position: relative; }
+    .pdf-page { width: 210mm; height: 297mm; padding: 26mm 22mm; margin: 0; overflow: hidden; box-sizing: border-box; page-break-after: always; page-break-inside: avoid; position: relative; }
     .pdf-page:last-child { page-break-after: auto; }
     img { max-width: 100%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     table { border-spacing: 0; }
