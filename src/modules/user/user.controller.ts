@@ -30,8 +30,8 @@ class UserController {
     res.json(ApiResponse.success(user, 'User updated'));
   });
 
-  delete = asyncHandler(async (req: Request, res: Response) => {
-    await userService.delete(req.params.id as string);
+  delete = asyncHandler(async (req: any, res: Response) => {
+    await userService.delete(req.params.id as string, req.user.userId);
     res.json(ApiResponse.noContent('User deleted'));
   });
 }
