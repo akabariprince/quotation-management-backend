@@ -98,18 +98,26 @@ class UserService {
     return this.findById(id);
   }
 
-  async delete(id: string) {
+  async delete(id: string, deletedBy?: string) {
     const user = await User.findByPk(id, {
       include: [{ model: Role, as: 'role' }],
     });
     if (!user) throw ApiError.notFound('User not found');
 
+    // Prevent deleting the current user
+    if (deletedBy && deletedBy === id) {
+      throw ApiError.badRequest('Cannot delete your own account');
+    }
+
+    // Prevent deleting the last admin user
     if (user.role?.name === 'admin') {
       const adminRole = await Role.findOne({ where: { name: 'admin' } });
       if (adminRole) {
         const adminCount = await User.count({ where: { roleId: adminRole.id } });
         if (adminCount <= 1) {
-          throw ApiError.badRequest('Cannot delete the last admin user');
+          throw ApiError.badRequest(
+            'This is the last active admin account. Please create another admin before deleting this user.'
+          );
         }
       }
     }
