@@ -18,7 +18,21 @@ router.get('/', requirePermission(PERMISSIONS.USER_VIEW), userController.getAll)
 router.get('/:id', requirePermission(PERMISSIONS.USER_VIEW), userController.getById);
 router.post('/', requirePermission(PERMISSIONS.USER_CREATE), validate(createUserSchema), userController.create);
 router.put('/:id', requirePermission(PERMISSIONS.USER_EDIT), validate(updateUserSchema), userController.update);
-router.delete('/:id', requirePermission(PERMISSIONS.USER_DELETE), userController.delete);
+router.delete(
+  '/:id',
+  requirePermission(PERMISSIONS.USER_DELETE),
+  asyncHandler(async (req: any, res: Response, next) => {
+    // Ensure only admin role can delete users
+    const currentUser = await User.findByPk(req.user.userId, {
+      include: [{ model: Role, as: 'role' }],
+    });
+    if (!currentUser || currentUser.role?.name !== 'admin') {
+      return res.status(403).json(ApiResponse.error('Only admin users can delete users'));
+    }
+    next();
+  }),
+  userController.delete
+);
 router.get(
   '/sales-persons',
   asyncHandler(async (_req, res) => {
