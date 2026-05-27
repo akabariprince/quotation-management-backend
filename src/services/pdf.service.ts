@@ -266,7 +266,7 @@ function buildProjectHTML(project: any): string {
       </div>
     </div>`;
 
-  // ═══ PRODUCT DETAIL PAGES ═══
+  // ═══ PRODUCT DETAIL PAGES - FIXED LAYOUT ═══
   const productPages = items
     .map((item: any, index: number) => {
       const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
@@ -275,7 +275,7 @@ function buildProjectHTML(project: any): string {
         ? `<div style="width:100%;padding-bottom:56.25%;position:relative;overflow:hidden;"><img src="${imageSrc}" alt="${item.quotationName || ""}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" /></div>`
         : `<div style="width:100%;padding-bottom:56.25%;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;width:100%;height:100%;color:#999;font-size:17px;text-align:center;display:flex;align-items:center;justify-content:center;">No Image Available</div></div>`;
 
-      // ─── Selections Table with Full Borders ───
+      // ─── Selections Table ───
       const mergedSelections = getMergedSelections(item);
       let selectionsTableHtml = "";
 
@@ -286,7 +286,7 @@ function buildProjectHTML(project: any): string {
             if (idx === 0) {
               selectionRows += `<tr><td rowspan="${sel.values.length}" style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:60px;vertical-align:top;">${sel.label}</td><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${value}</td></tr>`;
             } else {
-              selectionRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};">${value}</td></tr>`;
+              selectionRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${value}</td></tr>`;
             }
           });
         });
@@ -296,7 +296,7 @@ function buildProjectHTML(project: any): string {
         selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:6px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr><tr><td colspan="2" style="padding:5px 13px;color:#777;font-size:12px;border-right:${borderThin};">No selections selected</td></tr></tbody></table>`;
       }
 
-      // ─── Description Table with Full Borders ───
+      // ─── Description Table ───
       let descRows = "";
       const descData: Array<{ label: string; value: string }> = [];
 
@@ -317,7 +317,7 @@ function buildProjectHTML(project: any): string {
         });
 
       descData.forEach((data, idx) => {
-        descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:110px;">${data.label}</td><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};">${data.value}</td></tr>`;
+        descRows += `<tr><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:110px;">${data.label}</td><td style="padding:5px 13px;border-bottom:${borderThin};border-right:${borderThin};"> ${data.value}</td></tr>`;
       });
 
       const specialNoteHtml = item.specialNote
@@ -326,7 +326,7 @@ function buildProjectHTML(project: any): string {
 
       descRows += `<tr><td colspan="2" style="padding:9px 13px;vertical-align:bottom;border-right:${borderThin};">${specialNoteHtml}<div style="font-size:12px;color:#666;margin-top:5px;">Sales Manager</div><div style="font-weight:600;font-size:13px;">${salesPersonName}</div></td></tr>`;
 
-      // ─── Pricing Table with Full Borders ───
+      // ─── Pricing Table ───
       const pricingRows = `
         <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr>
         <tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
@@ -348,14 +348,37 @@ function buildProjectHTML(project: any): string {
                 <div style="flex:1;padding:7px 7px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
               </div>
             </div>
+            
             <div style="display:flex;border-bottom:${border};">
-              <div style="width:60%;position:relative;overflow:hidden;border-right:${border};">${imageHtml}</div>
-              <div style="width:40%;font-size:13px;">${selectionsTableHtml}</div>
+              <!-- LEFT COLUMN: Image + Description (60%) -->
+              <div style="width:60%;border-right:${border};">
+                <!-- Image Section -->
+                <div style="border-bottom:${border};">
+                  ${imageHtml}
+                </div>
+                <!-- Description Table -->
+                <div style="font-size:13px;">
+                  <table style="width:100%;border-collapse:collapse;">
+                    <tbody>${descRows}</tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN: Selections + Pricing (40%) -->
+              <div style="width:40%;">
+                <!-- Selections Table -->
+                <div style="border-bottom:${border};font-size:13px;">
+                  ${selectionsTableHtml}
+                </div>
+                <!-- Pricing Table -->
+                <div style="font-size:13px;">
+                  <table style="width:100%;border-collapse:collapse;">
+                    <tbody>${pricingRows}</tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-            <div style="display:flex;border-bottom:${border};">
-              <div style="width:50%;border-right:${border};font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody>${descRows}</tbody></table></div>
-              <div style="width:50%;font-size:13px;"><table style="width:100%;border-collapse:collapse;"><tbody>${pricingRows}</tbody></table></div>
-            </div>
+
             ${productPageFooter()}
           </div>
         </div>
