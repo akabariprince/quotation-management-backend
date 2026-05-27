@@ -6,6 +6,9 @@ import Customer from "../../models/Customer.model";
 import User from "../../models/User.model";
 import OTPLog from "../../models/OTPLog.model";
 import EmailLog from "../../models/EmailLog.model";
+import Wood from "../../models/Wood.model";
+import Polish from "../../models/Polish.model";
+import Fabric from "../../models/Fabric.model";
 
 /** Reusable include snippet for salesPerson */
 const salesPersonInclude = {
@@ -641,9 +644,6 @@ class ReportsService {
           "discountAmount",
           "total",
           "totalWithGst",
-          "woodName",
-          "polishName",
-          "fabricName",
         ],
         include: [
           {
@@ -666,12 +666,41 @@ class ReportsService {
               },
             ],
           },
+          {
+            model: Wood,
+            as: "wood",
+            attributes: ["name"],
+            required: false,
+          },
+          {
+            model: Polish,
+            as: "polish",
+            attributes: ["name"],
+            required: false,
+          },
+          {
+            model: Fabric,
+            as: "fabric",
+            attributes: ["name"],
+            required: false,
+          },
         ],
         order: [[{ model: Project, as: "project" }, "date", "DESC"]],
         limit: 200,
       });
 
-      return { summary: productSummary, details: productDetails };
+      const formattedDetails = (productDetails || []).map((item: any) => {
+        const row = typeof item.toJSON === "function" ? item.toJSON() : item;
+        const { wood, polish, fabric, ...base } = row;
+        return {
+          ...base,
+          woodName: wood?.name || null,
+          polishName: polish?.name || null,
+          fabricName: fabric?.name || null,
+        };
+      });
+
+      return { summary: productSummary, details: formattedDetails };
     } catch (error) {
       console.error("Product report error:", error);
       throw error;
