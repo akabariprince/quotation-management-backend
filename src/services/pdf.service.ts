@@ -144,6 +144,38 @@ function getMergedSelections(
   }));
 }
 
+function getSelectionBoxes(item: any): string[] {
+  const mergedSelections = getMergedSelections(item);
+  const boxes: string[] = [];
+
+  const multiValueItems: { label: string; values: string[] }[] = [];
+  const singleValueItems: { label: string; values: string[] }[] = [];
+
+  mergedSelections.forEach((sel) => {
+    if (sel.values.length >= 2) {
+      multiValueItems.push(sel);
+    } else if (sel.values.length === 1) {
+      singleValueItems.push(sel);
+    }
+  });
+
+  multiValueItems.forEach((sel) => {
+    sel.values.slice(0, 2).forEach((value) => {
+      boxes.push(`${sel.label}: ${value}`);
+    });
+  });
+
+  singleValueItems.forEach((sel) => {
+    boxes.push(`${sel.label}: ${sel.values[0]}`);
+  });
+
+  while (boxes.length < 20) {
+    boxes.push("");
+  }
+
+  return boxes.slice(0, 20);
+}
+
 const termsAndConditions = [
   "The quotation is valid for a period of 30 days from the date of this offer.",
   "The order shall be processed only after receipt of the purchase order and 70% advance payment from the client.",
@@ -167,19 +199,18 @@ function buildProjectHTML(project: any): string {
   const salesPersonName = project.salesPerson?.name || "—";
   const items = project.items || [];
 
-  // ═══ CONSISTENT BORDER DEFINITIONS ═══
   const border = "1px solid #000";
   const borderThin = "1px solid #ccc";
 
   const logoHtml = LOGO_BASE64
-    ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:70px;width:auto;object-fit:contain;" />`
-    : `<div style="font-size:28px;font-weight:700;">ecstatics.</div>`;
+    ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:75px;width:auto;object-fit:contain;" />`
+    : `<div style="font-size:30px;font-weight:700;">ecstatics.</div>`;
 
   const companyHeader = () => `
     <div style="border-bottom:${border};">
-      <div style="padding:13px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+      <div style="padding:12px 17px;display:flex;justify-content:space-between;align-items:flex-start;gap:17px;">
         <div style="flex:1;">
-          <div style="font-size:12px;color:#333;line-height:1.5;">
+          <div style="font-size:13px;color:#333;line-height:1.5;">
             <div style="font-weight:600;">Ecstatics Spaces India Pvt. Ltd.</div>
             <div>3120, Ganga Trueno, Airport Road,</div>
             <div>Viman Nagar, Pune</div>
@@ -192,38 +223,32 @@ function buildProjectHTML(project: any): string {
 
   const clientInfoRow = () => `
     <div style="display:flex;border-bottom:${border};">
-      <div style="flex:1;padding:11px 20px;border-right:${border};font-size:13px;">
-        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Client name</span><span style="font-weight:600;">${customer.name || ""}</span></div>
-        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Contact No</span><span>${customer.mobile || ""}</span></div>
-        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:95px;">Project Name</span><span style="font-weight:600;">${project.projectName || "—"}</span></div>
-        <div style="display:flex;gap:8px;"><span style="color:#666;min-width:95px;">Project No</span><span style="font-weight:600;">${project.projectNo || "—"}</span></div>
+      <div style="flex:1;padding:11px 17px;border-right:${border};font-size:14px;">
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:100px;">Client name</span><span style="font-weight:600;">${customer.name || ""}</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:100px;">Contact No</span><span>${customer.mobile || ""}</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:#666;min-width:100px;">Project Name</span><span style="font-weight:600;">${project.projectName || "—"}</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:#666;min-width:100px;">Project No</span><span style="font-weight:600;">${project.projectNo || "—"}</span></div>
       </div>
-      <div style="width:170px;min-width:170px;padding:11px 20px;font-size:14px;text-align:left;">
+      <div style="width:170px;min-width:170px;padding:11px 17px;font-size:15px;text-align:left;">
         <div style="color:#666;margin-bottom:5px;font-weight:600;">Date</div>
         <div style="font-weight:600;color:#111;">${formatDate(project.date)}</div>
       </div>
     </div>`;
 
   const pageFooter = () => `
-    <div style="border-top:${border};padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
+    <div style="border-top:${border};padding:9px 17px;display:flex;justify-content:space-between;font-size:13px;color:#555;background-color:#fafafa;">
       <span>(+91) 7066 46 6060</span><span>info@esipl.in</span>
     </div>`;
 
-  const productPageFooter = () => `
-    <div style="padding:9px 20px;display:flex;justify-content:space-between;font-size:12px;color:#555;background-color:#fafafa;">
-      <span>(+91) 7066 46 6060</span><span>info@esipl.in</span>
-    </div>`;
-
-  // ═══ PAGE 1: SUMMARY ═══
   const summaryRows = items
     .map(
       (item: any, index: number) => `
     <tr>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:9px 12px;text-align:center;">${index + 1}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:9px 12px;font-weight:500;">${item.quotationCode}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:9px 12px;text-align:right;">${formatCurrency(getPriceInclGst(item))}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:9px 12px;text-align:center;">${item.quantity}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:9px 12px;text-align:right;font-weight:500;">${formatCurrency(item.totalWithGst)}</td>
+      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:center;font-size:14px;">${index + 1}</td>
+      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;font-weight:500;font-size:14px;">${item.quotationCode}</td>
+      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:right;font-size:14px;">${formatCurrency(getPriceInclGst(item))}</td>
+      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:center;font-size:14px;">${item.quantity}</td>
+      <td style="border-bottom:${borderThin};padding:10px 12px;text-align:right;font-weight:500;font-size:14px;">${formatCurrency(item.totalWithGst)}</td>
     </tr>`,
     )
     .join("");
@@ -234,31 +259,31 @@ function buildProjectHTML(project: any): string {
         <div style="border:${border};flex:1;display:flex;flex-direction:column;">
           ${companyHeader()}
           ${clientInfoRow()}
-          <div style="border-bottom:${border};padding:9px 20px;text-align:center;font-weight:600;font-size:16px;background-color:#f9f9f9;">Quotation Summary</div>
+          <div style="border-bottom:${border};padding:10px 17px;text-align:center;font-weight:600;font-size:17px;background-color:#f9f9f9;">Quotation Summary</div>
           <div style="flex:1;">
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="background-color:#f3f4f6;">
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:center;font-weight:600;width:55px;font-size:12.5px;">Sr no</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:left;font-weight:600;font-size:12.5px;">Code</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:right;font-weight:600;font-size:12.5px;">Price <span style="font-weight:400;font-size:11px;color:#666;">(inc. of gst)</span></th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:center;font-weight:600;width:65px;font-size:12.5px;">Units</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:9px 12px;text-align:right;font-weight:600;font-size:12.5px;">Total <span style="font-weight:400;font-size:11px;color:#666;">(incl. of gst)</span></th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:600;width:60px;font-size:13.5px;">Sr no</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:left;font-weight:600;font-size:13.5px;">Code</th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:right;font-weight:600;font-size:13.5px;">Price <span style="font-weight:400;font-size:12px;color:#666;">(inc. of gst)</span></th>
+                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:600;width:70px;font-size:13.5px;">Units</th>
+                  <th style="border-bottom:${border};padding:10px 12px;text-align:right;font-weight:600;font-size:13.5px;">Total <span style="font-weight:400;font-size:12px;color:#666;">(incl. of gst)</span></th>
                 </tr>
               </thead>
               <tbody>
                 ${summaryRows}
                 <tr style="background-color:#f9f9f9;">
-                  <td colspan="4" style="border-top:${border};border-bottom:${border};border-right:${borderThin};padding:11px 12px;text-align:center;font-weight:600;font-size:14px;">Grand Total <span style="font-weight:500;font-size:12px;color:#555;">(incl. of gst)</span></td>
-                  <td style="border-top:${border};border-bottom:${border};border-right:${borderThin};padding:11px 12px;text-align:right;font-weight:600;font-size:14px;">${formatCurrency(project.grandTotalWithGst)}</td>
+                  <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:12px;text-align:center;font-weight:600;font-size:15px;">Grand Total <span style="font-weight:500;font-size:13px;color:#555;">(incl. of gst)</span></td>
+                  <td style="border-top:${border};padding:12px;text-align:right;font-weight:600;font-size:15px;">${formatCurrency(project.grandTotalWithGst)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div style="border-top:${border};display:flex;">
-            <div style="flex:1;padding:13px 20px;display:flex;flex-direction:column;justify-content:flex-end;">
-              <div style="font-size:12px;color:#666;">Sales Manager</div>
-              <div style="font-size:14px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
+            <div style="flex:1;padding:13px 17px;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div style="font-size:13px;color:#666;">Sales Manager</div>
+              <div style="font-size:15px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
             </div>
           </div>
           ${pageFooter()}
@@ -266,38 +291,78 @@ function buildProjectHTML(project: any): string {
       </div>
     </div>`;
 
-  // ═══ PRODUCT DETAIL PAGES ═══
   const productPages = items
     .map((item: any, index: number) => {
       const imageSrc = item.images?.[0] ? resolveImageSrc(item.images[0]) : "";
 
       const imageHtml = imageSrc
         ? `<div style="width:100%;padding-bottom:56.25%;position:relative;overflow:hidden;"><img src="${imageSrc}" alt="${item.quotationName || ""}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" /></div>`
-        : `<div style="width:100%;padding-bottom:56.25%;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;width:100%;height:100%;color:#999;font-size:17px;text-align:center;display:flex;align-items:center;justify-content:center;">No Image Available</div></div>`;
+        : `<div style="width:100%;padding-bottom:56.25%;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;width:100%;height:100%;color:#999;font-size:18px;text-align:center;display:flex;align-items:center;justify-content:center;">No Image Available</div></div>`;
 
-      // ─── Selections Table ───
-      const mergedSelections = getMergedSelections(item);
-      let selectionsTableHtml = "";
+      const selectionBoxes = getSelectionBoxes(item);
+      let selectionsGridHtml = "";
 
-      if (mergedSelections.length > 0) {
-        let selectionRows = "";
-        mergedSelections.forEach((sel, selIdx) => {
-          sel.values.forEach((value, idx) => {
-            if (idx === 0) {
-              selectionRows += `<tr><td rowspan="${sel.values.length}" style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:60px;vertical-align:top;">${sel.label}</td><td style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};">${value}</td></tr>`;
-            } else {
-              selectionRows += `<tr><td style="padding:6px 13px;border-bottom:${borderThin};border-right:${borderThin};">${value}</td></tr>`;
-            }
-          });
-        });
+      // Column-wise fill with EQUAL dimensions, SAME font size, text wrapping enabled
+      for (let row = 0; row < 4; row++) {
+        let rowHtml = "<tr>";
+        for (let col = 0; col < 5; col++) {
+          const boxIndex = col * 4 + row;
+          const boxContent = selectionBoxes[boxIndex] || "";
+          const borderRight = col < 4 ? `border-right:${borderThin};` : "";
+          const borderBottom = row < 3 ? `border-bottom:${borderThin};` : "";
 
-        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:7px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr>${selectionRows}</tbody></table>`;
-      } else {
-        selectionsTableHtml = `<table style="width:100%;border-collapse:collapse;"><tbody><tr><td colspan="2" style="padding:7px 13px;font-weight:600;font-size:13px;background-color:#f9f9f9;border-bottom:${borderThin};border-right:${borderThin};">Selections</td></tr><tr><td colspan="2" style="padding:6px 13px;color:#777;font-size:12px;border-bottom:${borderThin};border-right:${borderThin};">No selections selected</td></tr></tbody></table>`;
+          // ALL boxes: same font size (13px), same dimensions, text wraps naturally
+          rowHtml += `<td style="${borderRight}${borderBottom}padding:10px 11px;font-size:13px;width:20%;height:54px;overflow:hidden;word-wrap:break-word;vertical-align:top;text-align:left;line-height:1.2;">${boxContent}</td>`;
+        }
+        rowHtml += "</tr>";
+        selectionsGridHtml += rowHtml;
       }
 
-      // ─── Description Table ───
-      let descRows = "";
+      const selectionsTableHtml = `
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr><th colspan="5" style="padding:7px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};text-align:left;">Selection Details</th></tr>
+          </thead>
+          <tbody>${selectionsGridHtml}</tbody>
+        </table>`;
+
+      let dimensionRows = "";
+      const dimensionData: Array<{ label: string; value: string }> = [];
+
+      if (item.quotation?.length)
+        dimensionData.push({
+          label: "Length (L)",
+          value: `${item.quotation.length} mm`,
+        });
+      if (item.quotation?.width)
+        dimensionData.push({
+          label: "Width (W)",
+          value: `${item.quotation.width} mm`,
+        });
+      if (item.quotation?.height)
+        dimensionData.push({
+          label: "Height (H)",
+          value: `${item.quotation.height} mm`,
+        });
+
+      if (dimensionData.length === 0) {
+        dimensionRows = `<tr><td colspan="2" style="padding:7px 14px;color:#777;font-size:13px;">No dimensions available</td></tr>`;
+      } else {
+        dimensionData.forEach((data, idx) => {
+          const borderBottom =
+            idx < dimensionData.length - 1
+              ? `border-bottom:${borderThin};`
+              : "";
+          dimensionRows += `<tr><td style="padding:7px 14px;${borderBottom}border-right:${borderThin};color:#555;width:40%;font-weight:500;font-size:13px;line-height:1.3;">${data.label}</td><td style="padding:7px 14px;${borderBottom}font-weight:600;font-size:13px;line-height:1.3;">${data.value}</td></tr>`;
+        });
+      }
+
+      const emptyRowsNeeded = Math.max(0, 3 - dimensionData.length);
+      for (let i = 0; i < emptyRowsNeeded; i++) {
+        dimensionRows += `<tr><td colspan="2" style="padding:7px 14px;height:32px;">&nbsp;</td></tr>`;
+      }
+
+      let notesContent = "";
       const descData: Array<{ label: string; value: string }> = [];
 
       if (item.woodName) descData.push({ label: "Wood", value: item.woodName });
@@ -305,106 +370,107 @@ function buildProjectHTML(project: any): string {
         descData.push({ label: "Polish", value: item.polishName });
       if (item.fabricName)
         descData.push({ label: "Fabric", value: item.fabricName });
-      if (item.quotation?.length)
-        descData.push({
-          label: "Length",
-          value: `${item.quotation.length} (mm)`,
+
+      if (descData.length > 0) {
+        descData.forEach((data) => {
+          notesContent += `<div style="margin-bottom:6px;font-size:13px;"><span style="font-weight:500;color:#555;">${data.label}:</span> <span>${data.value}</span></div>`;
         });
-      if (item.quotation?.width)
-        descData.push({
-          label: "Width",
-          value: `${item.quotation.width} (mm)`,
-        });
-
-      descData.forEach((data, idx) => {
-        descRows += `<tr><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};color:#555;width:90px;">${data.label}</td><td style="padding:7px 13px;border-bottom:${borderThin};border-right:${borderThin};">${data.value}</td></tr>`;
-      });
-
-      const specialNoteHtml = item.specialNote
-        ? `<div style="font-size:12px;color:#666;margin-top:5px;"><span style="font-weight:600;font-size:13px;">Special Note: </span><span style="color:#333;">${item.specialNote}</span></div>`
-        : "";
-
-      if (specialNoteHtml) {
-        descRows += `<tr><td colspan="2" style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};">${specialNoteHtml}</td></tr>`;
       }
 
-      // ─── Pricing Table ───
+      if (item.specialNote) {
+        notesContent += `<div style="margin-top:10px;"><div style="font-weight:600;font-size:13px;color:#333;margin-bottom:4px;">Special Note:</div><div style="font-size:12px;color:#333;line-height:1.5;">${item.specialNote}</div></div>`;
+      }
+
+      notesContent += `<div style="margin-top:10px;"><div style="font-size:12px;color:#666;">Sales Manager</div><div style="font-size:14px;font-weight:600;margin-top:2px;">${salesPersonName}</div></div>`;
+
+      const notesHtml = `
+        <div style="height:100%;display:flex;flex-direction:column;">
+          <div style="padding:11.5px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">General Notes</div>
+          <div style="flex:1;padding:10px 14px;">
+            ${notesContent || `<div style="font-size:13px;color:#777;">No notes available</div>`}
+          </div>
+        </div>`;
+
       const pricingRows = `
-      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;">Price <span style="font-size:11px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;">${formatCurrency(getPriceInclGst(item))}</td></tr>
-      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};">Discount <span style="font-size:12px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;color:#c00;font-weight:500;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
-      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};">Units</td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:500;">${item.quantity}</td></tr>
-      <tr style="background-color:#f9f9f9;"><td style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:14px;">Final Price <span style="font-size:11px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:10px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:right;font-weight:600;font-size:14px;">${formatCurrency(getTotalInclGst(item))}</td></tr>
-      <tr><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Quotation No</td><td style="padding:8px 13px;border-bottom:${borderThin};border-right:${borderThin};text-align:left;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.projectQuotationNo || index + 1}</td></tr>
+      <tr><td colspan="2" style="padding:7px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">Cost & GST Details</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;font-size:13px;width:45%;line-height:1.3;">Price<br><span style="font-size:10px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:600;font-size:13px;width:55%;line-height:1.3;">${formatCurrency(getPriceInclGst(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Discount <span style="font-size:11px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;font-size:13px;width:55%;line-height:1.3;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Units</td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:500;font-size:13px;width:55%;line-height:1.3;">${item.quantity}</td></tr>
+      <tr style="background-color:#f9f9f9;"><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:13px;width:45%;line-height:1.3;">Final Price<br><span style="font-size:10px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:600;font-size:14px;width:55%;line-height:1.3;">${formatCurrency(getTotalInclGst(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Quotation No</td><td style="padding:7px 14px;text-align:right;font-weight:600;font-size:11px;width:55%;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;">${item.projectQuotationNo || index + 1}</td></tr>
     `;
 
       return `
     <div class="pdf-page">
       <div style="height:100%;display:flex;flex-direction:column;">
-        <div style="border:${border};display:flex;flex-direction:column;">
+        <div style="border:${border};height:100%;display:flex;flex-direction:column;">
+          
           ${companyHeader()}
           ${clientInfoRow()}
           
           <div style="display:flex;border-bottom:${border};">
-            <div style="flex:1;padding:7px 13px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
+            <div style="flex:1;padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
             <div style="width:170px;min-width:170px;display:flex;">
-              <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:13px;background-color:#f9f9f9;text-align:center;">CODE</div>
-              <div style="flex:1;padding:7px 7px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
+              <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;text-align:center;">CODE</div>
+              <div style="flex:1;padding:7px 9px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
             </div>
           </div>
           
+          <div style="border-bottom:${border};">
+            ${selectionsTableHtml}
+          </div>
+          
           <div style="display:flex;border-bottom:${border};">
-            <!-- LEFT COLUMN: Image + Description (60%) -->
-            <div style="width:60%;border-right:${border};display:flex;flex-direction:column;">
-              <!-- Image Section -->
-              <div style="border-bottom:${border};">
-                ${imageHtml}
-              </div>
-              
-              <!-- Description Table -->
-              <div style="font-size:13px;">
-                <table style="width:100%;border-collapse:collapse;">
-                  <tbody>${descRows}</tbody>
-                </table>
-              </div>
+            <div style="width:65%;border-right:${border};">
+              ${imageHtml}
             </div>
-
-            <!-- RIGHT COLUMN: Selections + Pricing (40%) -->
-            <div style="width:40%;display:flex;flex-direction:column;">
-              <!-- Selections Table -->
-              <div style="border-bottom:${border};font-size:13px;">
-                ${selectionsTableHtml}
-              </div>
-              
-              <!-- Pricing Table -->
-              <div style="font-size:13px;">
-                <table style="width:100%;border-collapse:collapse;">
-                  <tbody>${pricingRows}</tbody>
-                </table>
-              </div>
+            <div style="width:35%;">
+              <table style="width:100%;border-collapse:collapse;height:100%;">
+                <tbody>${pricingRows}</tbody>
+              </table>
             </div>
           </div>
-
+          
+          <div style="display:flex;border-bottom:${border};flex:1;">
+            <div style="width:50%;border-right:${border};display:flex;flex-direction:column;">
+              <table style="width:100%;border-collapse:collapse;height:100%;">
+                <tbody>
+                  <tr><td colspan="2" style="padding:7px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">Dimensions</td></tr>
+                  ${dimensionRows}
+                </tbody>
+              </table>
+            </div>
+            <div style="width:50%;">
+              ${notesHtml}
+            </div>
+          </div>
+          
           <div style="border-bottom:${border};display:flex;">
-            <div style="flex:1;padding:13px 20px;display:flex;flex-direction:column;justify-content:flex-end;">
-              <div style="font-size:12px;color:#666;">Sales Manager</div>
-              <div style="font-size:14px;font-weight:600;margin-top:3px;">${salesPersonName}</div>
+            <div style="flex:1;padding:11px 17px;border-right:${border};">
+              <div style="font-size:13px;color:#666;margin-bottom:3px;">Customer Signature</div>
+              <div style="height:32px;border-bottom:1px solid #ddd;margin-top:6px;"></div>
+            </div>
+            <div style="flex:1;padding:11px 17px;">
+              <div style="font-size:13px;color:#666;margin-bottom:3px;">Company Signature</div>
+              <div style="height:32px;border-bottom:1px solid #ddd;margin-top:6px;"></div>
             </div>
           </div>
+          
           ${pageFooter()}
+          
         </div>
       </div>
     </div>`;
     })
     .join("");
 
-  // ═══ TERMS & CONDITIONS PAGE ═══
   const termsPage = `
     <div class="pdf-page">
       <div style="height:100%;display:flex;flex-direction:column;">
         <div style="border:${border};flex:1;display:flex;flex-direction:column;">
           ${companyHeader()}
-          <div style="border-bottom:${border};padding:9px 20px;text-align:center;font-weight:600;font-size:16px;background-color:#f9f9f9;">Terms &amp; Conditions</div>
-          <div style="flex:1;padding:18px 22px;font-size:12px;line-height:1.7;color:#222;"><ol style="padding-left:18px;margin:0;">${termsAndConditions.map((t) => `<li style="margin-bottom:7px;padding-left:4px;">${t}</li>`).join("")}</ol></div>
+          <div style="border-bottom:${border};padding:10px 17px;text-align:center;font-weight:600;font-size:17px;background-color:#f9f9f9;">Terms &amp; Conditions</div>
+          <div style="flex:1;padding:18px 20px;font-size:13px;line-height:1.65;color:#222;"><ol style="padding-left:18px;margin:0;">${termsAndConditions.map((t) => `<li style="margin-bottom:7px;padding-left:4px;">${t}</li>`).join("")}</ol></div>
           ${pageFooter()}
         </div>
       </div>
@@ -421,7 +487,7 @@ function buildProjectHTML(project: any): string {
     html, body { width: 210mm; margin: 0; padding: 0; }
     body { font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     @page { size: A4; margin: 0; }
-    .pdf-page { width: 210mm; height: 297mm; padding: 26mm 22mm; margin: 0; overflow: hidden; box-sizing: border-box; page-break-after: always; page-break-inside: avoid; position: relative; }
+    .pdf-page { width: 210mm; height: 297mm; padding: 10mm 10mm; margin: 0; overflow: hidden; box-sizing: border-box; page-break-after: always; page-break-inside: avoid; position: relative; }
     .pdf-page:last-child { page-break-after: auto; }
     img { max-width: 100%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     table { border-spacing: 0; }
