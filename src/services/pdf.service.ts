@@ -406,16 +406,22 @@ function buildProjectHTML(project: any): string {
           ${companyHeader()}
           ${clientInfoRow()}
           
-          <div style="display:flex;border-bottom:${border};">
-            <div style="flex:1;padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
-            <div style="width:170px;min-width:170px;display:flex;">
-              <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;text-align:center;">CODE</div>
-              <div style="flex:1;padding:7px 9px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
-            </div>
-          </div>
+          
           
           <div style="border-bottom:${border};">
             ${selectionsTableHtml}
+          </div>
+
+          <div style="display:flex;border-bottom:${border};">
+            <div style="flex:1;padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
+           <div style="width:35%;display:flex;">
+            <div style="padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;text-align:left;width:45%;">
+              CODE
+            </div>
+            <div style="padding:7px 14px;font-weight:600;font-size:13px;word-break:break-word;width:55%;">
+              ${item.quotationCode || "—"}
+            </div>
+          </div>
           </div>
           
           <div style="display:flex;border-bottom:${border};">
