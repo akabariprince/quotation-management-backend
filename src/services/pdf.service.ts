@@ -385,7 +385,7 @@ function buildProjectHTML(project: any): string {
 
       const notesHtml = `
         <div style="height:100%;display:flex;flex-direction:column;">
-          <div style="padding:12px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">General Notes</div>
+          <div style="padding:14px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">General Notes</div>
           <div style="flex:1;padding:10px 14px;">
             ${notesContent || `<div style="font-size:13px;color:#777;">No notes available</div>`}
           </div>
@@ -445,7 +445,7 @@ function buildProjectHTML(project: any): string {
             </div>
           </div>
           
-          <div style="border-bottom:${border};display:flex;">
+          <div style="display:flex;">
             <div style="flex:1;padding:11px 17px;border-right:${border};">
               <div style="font-size:13px;color:#666;margin-bottom:3px;">Customer Signature</div>
               <div style="height:32px;border-bottom:1px solid #ddd;margin-top:6px;"></div>
