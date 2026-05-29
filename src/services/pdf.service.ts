@@ -273,7 +273,7 @@ function buildProjectHTML(project: any): string {
               </thead>
               <tbody>
                 ${summaryRows}
-                <tr style="background-color:#f9f9f9;">
+                <tr style="background-color:#f9f9f9;border-bottom:${border}">
                   <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:12px;text-align:center;font-weight:600;font-size:15px;">Grand Total <span style="font-weight:500;font-size:13px;color:#555;">(incl. of gst)</span></td>
                   <td style="border-top:${border};padding:12px;text-align:right;font-weight:600;font-size:15px;">${formatCurrency(project.grandTotalWithGst)}</td>
                 </tr>
