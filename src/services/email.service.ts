@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { env } from "../config/environment";
 import { logger } from "../utils/logger";
+import { getProjectPDFPath } from "./pdf.service";
 
 import { settingService } from "../modules/setting/setting.service";
 
@@ -552,6 +553,7 @@ export interface ProjectEmailData {
   projectNo: string;
   projectId: string;
   customerName: string;
+  projectName?: string | null;
   date: Date | string;
   salesPersonName: string;
   items: Array<{
@@ -565,6 +567,7 @@ export interface ProjectEmailData {
   cgst: number;
   sgst: number;
   grandTotalWithGst: number;
+  totalDiscount?: number;
 }
 
 export const sendProjectEmail = async (
@@ -677,6 +680,12 @@ export const sendProjectEmail = async (
           <td style="padding:5px 0;font-size:13px;color:${t.textSecondary};font-family:${t.font};">SGST (9%)</td>
           <td style="padding:5px 0;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:${t.text};font-family:${t.font};">${formatCurrency(data.sgst)}</td>
         </tr>
+        ${data.totalDiscount && data.totalDiscount > 0 ? `
+        <tr class="gst-row">
+          <td style="padding:5px 0;font-size:13px;color:${t.textSecondary};font-family:${t.font};">Discount</td>
+          <td style="padding:5px 0;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:#d946ef;font-family:${t.font};">-${formatCurrency(data.totalDiscount)}</td>
+        </tr>
+        ` : ""}
         <tr class="gst-total">
           <td style="padding:10px 0 4px;font-size:15px;font-weight:800;border-top:2px solid ${t.border};color:${t.text};font-family:${t.font};">Total with GST</td>
           <td style="padding:10px 0 4px;font-size:16px;font-weight:800;text-align:right;border-top:2px solid ${t.border};color:${t.accent};font-variant-numeric:tabular-nums;font-family:${t.font};">${formatCurrency(data.grandTotalWithGst)}</td>
@@ -710,15 +719,48 @@ export const sendProjectEmail = async (
     contentType: string;
   }> = [];
 
-  const pdfPath = path.join(PDF_UPLOAD_DIR, `${data.projectId}.pdf`);
+  let pdfPath = getProjectPDFPath(data.projectId);
+  let attachmentFilename = `${data.projectNo || data.projectId}.pdf`;
+
+  try {
+    const { PdfPrintLog } = require("../models");
+    const latestLog = await PdfPrintLog.findOne({
+      where: { projectId: data.projectId },
+      order: [["createdAt", "DESC"]],
+    });
+    if (latestLog && fs.existsSync(latestLog.filePath)) {
+      pdfPath = latestLog.filePath;
+      attachmentFilename = latestLog.fileName;
+    } else {
+      const { sanitizeSegment, getDateStamp, getUniqueNo } = require("./pdfPrintLog.service");
+      const companyName = sanitizeSegment(data.customerName || "Company");
+      const projectName = sanitizeSegment(data.projectName || "Project");
+      const now = new Date(data.date || new Date());
+      const dateStamp = getDateStamp(now);
+      const uniqueNo = getUniqueNo(now);
+      attachmentFilename = `${companyName}_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+    }
+  } catch (error) {
+    logger.error("Error retrieving latest PDF print log for email:", error);
+    try {
+      const { sanitizeSegment, getDateStamp, getUniqueNo } = require("./pdfPrintLog.service");
+      const companyName = sanitizeSegment(data.customerName || "Company");
+      const projectName = sanitizeSegment(data.projectName || "Project");
+      const now = new Date(data.date || new Date());
+      const dateStamp = getDateStamp(now);
+      const uniqueNo = getUniqueNo(now);
+      attachmentFilename = `${companyName}_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+    } catch (err) {}
+  }
+
   if (fs.existsSync(pdfPath)) {
     pdfAttachments.push({
-      filename: `${data.projectNo || data.projectId}.pdf`,
+      filename: attachmentFilename,
       path: pdfPath,
       contentType: "application/pdf",
     });
     logger.info(
-      `Attaching PDF for project ${data.projectId}: ${pdfPath}`
+      `Attaching PDF for project ${data.projectId}: ${pdfPath} as ${attachmentFilename}`
     );
   } else {
     logger.info(
@@ -971,8 +1013,8 @@ export const sendQuotationEmail = async (
   }> = [];
 
   if (projectId) {
-    const pdfPath = path.join(PDF_UPLOAD_DIR, `${projectId}.pdf`);
-    if (fs.existsSync(pdfPath)) {
+    const pdfPath = getProjectPDFPath(projectId);
+    if (fs.existsSync(pdfPath) && !pdfPath.endsWith(`temp_${projectId}.pdf`)) {
       pdfAttachments.push({
         filename: `${quotationNo || projectId}.pdf`,
         path: pdfPath,

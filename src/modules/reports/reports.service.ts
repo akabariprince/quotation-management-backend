@@ -9,6 +9,7 @@ import EmailLog from "../../models/EmailLog.model";
 import Wood from "../../models/Wood.model";
 import Polish from "../../models/Polish.model";
 import Fabric from "../../models/Fabric.model";
+import { pdfPrintLogService } from "../../services/pdfPrintLog.service";
 
 /** Reusable include snippet for salesPerson */
 const salesPersonInclude = {
@@ -175,6 +176,10 @@ class ReportsService {
       console.error("Quotation summary error:", error);
       throw error;
     }
+  }
+
+  async getPdfPrintReport(query: any) {
+    return pdfPrintLogService.getSentPdfLogs(query);
   }
 
   /* ─── 3. CONVERSION REPORT ─── */

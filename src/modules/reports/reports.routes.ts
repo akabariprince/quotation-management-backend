@@ -17,6 +17,7 @@ router.get(
 router.get("/customer-history", reportsController.getCustomerHistoryReport);
 router.get("/product", reportsController.getProductReport);
 router.get("/discount-approval", reportsController.getDiscountApprovalReport);
+router.get("/pdf-prints", reportsController.getPdfPrintReport);
 router.get(
   "/detailed/:projectId",
   reportsController.getDetailedQuotationReport,

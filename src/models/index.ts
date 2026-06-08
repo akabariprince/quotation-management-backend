@@ -19,6 +19,7 @@ import Setting from "./Setting.model";
 import Selection from "./Selection.model";
 import SelectionVariantMapping from "./SelectionVariantMapping.model";
 import SelectionValue from "./SelectionValue.model";
+import PdfPrintLog from "./PdfPrintLog.model";
 
 // Role -> User
 Role.hasMany(User, { foreignKey: "roleId", as: "users" });
@@ -172,6 +173,15 @@ OTPLog.belongsTo(User, { foreignKey: "approvedBy", as: "approver" });
 // EmailLog -> User
 EmailLog.belongsTo(User, { foreignKey: "sentBy", as: "sender" });
 
+// PdfPrintLog -> Project/User
+PdfPrintLog.belongsTo(Project, { foreignKey: "projectId", as: "project" });
+Project.hasMany(PdfPrintLog, { foreignKey: "projectId", as: "pdfPrintLogs" });
+PdfPrintLog.belongsTo(User, { foreignKey: "generatedBy", as: "generator" });
+User.hasMany(PdfPrintLog, {
+  foreignKey: "generatedBy",
+  as: "generatedPdfPrintLogs",
+});
+
 // Customer -> User (creator)
 Customer.belongsTo(User, {
   foreignKey: "createdBy",
@@ -204,4 +214,5 @@ export {
   Selection,
   SelectionVariantMapping,
   SelectionValue,
+  PdfPrintLog,
 };

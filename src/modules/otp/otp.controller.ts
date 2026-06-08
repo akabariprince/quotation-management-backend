@@ -84,6 +84,12 @@ class OTPController {
     const result = await otpService.resendOTP(id as string, userId);
     res.json(ApiResponse.success(result, "OTP resent successfully"));
   });
+
+  getStatus = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const otpLog = await otpService.findById(id as string);
+    res.json(ApiResponse.success({ status: otpLog.status }));
+  });
 }
 
 export const otpController = new OTPController();

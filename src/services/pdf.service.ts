@@ -200,7 +200,7 @@ function buildProjectHTML(project: any): string {
   const items = project.items || [];
 
   const border = "1px solid #000";
-  const borderThin = "1px solid #ccc";
+  // const borderThin = "1px solid #ccc";
 
   const logoHtml = LOGO_BASE64
     ? `<img src="${LOGO_BASE64}" alt="Logo" style="height:75px;width:auto;object-fit:contain;" />`
@@ -244,11 +244,11 @@ function buildProjectHTML(project: any): string {
     .map(
       (item: any, index: number) => `
     <tr>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:center;font-size:14px;">${index + 1}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;font-weight:500;font-size:14px;">${item.quotationCode}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:right;font-size:14px;">${formatCurrency(getPriceInclGst(item))}</td>
-      <td style="border-bottom:${borderThin};border-right:${borderThin};padding:10px 12px;text-align:center;font-size:14px;">${item.quantity}</td>
-      <td style="border-bottom:${borderThin};padding:10px 12px;text-align:right;font-weight:500;font-size:14px;">${formatCurrency(item.totalWithGst)}</td>
+      <td style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:center;font-size:14px;">${index + 1}</td>
+      <td style="border-bottom:${border};border-right:${border};padding:10px 12px;font-weight:500;font-size:14px;">${item.quotationCode}</td>
+      <td style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:right;font-size:14px;">${formatCurrency(getPriceInclGst(item))}</td>
+      <td style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:center;font-size:14px;">${item.quantity}</td>
+      <td style="border-bottom:${border};padding:10px 12px;text-align:right;font-weight:500;font-size:14px;">${formatCurrency(item.totalWithGst)}</td>
     </tr>`,
     )
     .join("");
@@ -264,17 +264,17 @@ function buildProjectHTML(project: any): string {
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="background-color:#f3f4f6;">
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:600;width:60px;font-size:13.5px;">Sr no</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:left;font-weight:600;font-size:13.5px;">Code</th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:right;font-weight:600;font-size:13.5px;">Price <span style="font-weight:400;font-size:12px;color:#666;">(inc. of gst)</span></th>
-                  <th style="border-bottom:${border};border-right:${borderThin};padding:10px 12px;text-align:center;font-weight:600;width:70px;font-size:13.5px;">Units</th>
+                  <th style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:center;font-weight:600;width:60px;font-size:13.5px;">Sr no</th>
+                  <th style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:left;font-weight:600;font-size:13.5px;">Code</th>
+                  <th style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:right;font-weight:600;font-size:13.5px;">Price <span style="font-weight:400;font-size:12px;color:#666;">(inc. of gst)</span></th>
+                  <th style="border-bottom:${border};border-right:${border};padding:10px 12px;text-align:center;font-weight:600;width:70px;font-size:13.5px;">Units</th>
                   <th style="border-bottom:${border};padding:10px 12px;text-align:right;font-weight:600;font-size:13.5px;">Total <span style="font-weight:400;font-size:12px;color:#666;">(incl. of gst)</span></th>
                 </tr>
               </thead>
               <tbody>
                 ${summaryRows}
-                <tr style="background-color:#f9f9f9;">
-                  <td colspan="4" style="border-top:${border};border-right:${borderThin};padding:12px;text-align:center;font-weight:600;font-size:15px;">Grand Total <span style="font-weight:500;font-size:13px;color:#555;">(incl. of gst)</span></td>
+                <tr style="background-color:#f9f9f9;border-bottom:${border};">
+                  <td colspan="4" style="border-top:${border};border-right:${border};padding:12px;text-align:center;font-weight:600;font-size:15px;">Grand Total <span style="font-weight:500;font-size:13px;color:#555;">(incl. of gst)</span></td>
                   <td style="border-top:${border};padding:12px;text-align:right;font-weight:600;font-size:15px;">${formatCurrency(project.grandTotalWithGst)}</td>
                 </tr>
               </tbody>
@@ -302,16 +302,14 @@ function buildProjectHTML(project: any): string {
       const selectionBoxes = getSelectionBoxes(item);
       let selectionsGridHtml = "";
 
-      // Column-wise fill with EQUAL dimensions, SAME font size, text wrapping enabled
       for (let row = 0; row < 4; row++) {
         let rowHtml = "<tr>";
         for (let col = 0; col < 5; col++) {
           const boxIndex = col * 4 + row;
           const boxContent = selectionBoxes[boxIndex] || "";
-          const borderRight = col < 4 ? `border-right:${borderThin};` : "";
-          const borderBottom = row < 3 ? `border-bottom:${borderThin};` : "";
+          const borderRight = col < 4 ? `border-right:${border};` : "";
+          const borderBottom = row < 3 ? `border-bottom:${border};` : "";
 
-          // ALL boxes: same font size (13px), same dimensions, text wraps naturally
           rowHtml += `<td style="${borderRight}${borderBottom}padding:10px 11px;font-size:13px;width:20%;height:54px;overflow:hidden;word-wrap:break-word;vertical-align:top;text-align:left;line-height:1.2;">${boxContent}</td>`;
         }
         rowHtml += "</tr>";
@@ -351,9 +349,9 @@ function buildProjectHTML(project: any): string {
         dimensionData.forEach((data, idx) => {
           const borderBottom =
             idx < dimensionData.length - 1
-              ? `border-bottom:${borderThin};`
+              ? `border-bottom:${border};`
               : "";
-          dimensionRows += `<tr><td style="padding:7px 14px;${borderBottom}border-right:${borderThin};color:#555;width:40%;font-weight:500;font-size:13px;line-height:1.3;">${data.label}</td><td style="padding:7px 14px;${borderBottom}font-weight:600;font-size:13px;line-height:1.3;">${data.value}</td></tr>`;
+          dimensionRows += `<tr><td style="padding:7px 14px;${borderBottom}border-right:${border};color:#555;width:40%;font-weight:500;font-size:13px;line-height:1.3;">${data.label}</td><td style="padding:7px 14px;${borderBottom}font-weight:600;font-size:13px;line-height:1.3;">${data.value}</td></tr>`;
         });
       }
 
@@ -385,7 +383,7 @@ function buildProjectHTML(project: any): string {
 
       const notesHtml = `
         <div style="height:100%;display:flex;flex-direction:column;">
-          <div style="padding:11.5px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">General Notes</div>
+          <div style="padding:14px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">General Notes</div>
           <div style="flex:1;padding:10px 14px;">
             ${notesContent || `<div style="font-size:13px;color:#777;">No notes available</div>`}
           </div>
@@ -393,11 +391,11 @@ function buildProjectHTML(project: any): string {
 
       const pricingRows = `
       <tr><td colspan="2" style="padding:7px 14px;font-weight:600;font-size:14px;background-color:#f9f9f9;border-bottom:${border};">Cost & GST Details</td></tr>
-      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-weight:500;font-size:13px;width:45%;line-height:1.3;">Price<br><span style="font-size:10px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:600;font-size:13px;width:55%;line-height:1.3;">${formatCurrency(getPriceInclGst(item))}</td></tr>
-      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Discount <span style="font-size:11px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;color:#c00;font-weight:500;font-size:13px;width:55%;line-height:1.3;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
-      <tr><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Units</td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:500;font-size:13px;width:55%;line-height:1.3;">${item.quantity}</td></tr>
-      <tr style="background-color:#f9f9f9;"><td style="padding:7px 14px;border-bottom:${borderThin};border-right:${borderThin};font-weight:600;font-size:13px;width:45%;line-height:1.3;">Final Price<br><span style="font-size:10px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:7px 14px;border-bottom:${borderThin};text-align:right;font-weight:600;font-size:14px;width:55%;line-height:1.3;">${formatCurrency(getTotalInclGst(item))}</td></tr>
-      <tr><td style="padding:7px 14px;border-right:${borderThin};font-size:13px;width:45%;line-height:1.3;">Quotation No</td><td style="padding:7px 14px;text-align:right;font-weight:600;font-size:11px;width:55%;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;">${item.projectQuotationNo || index + 1}</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${border};border-right:${border};font-weight:500;font-size:13px;width:45%;line-height:1.3;">Price<br><span style="font-size:10px;color:#666;font-weight:400;">(inc. of gst)</span></td><td style="padding:7px 14px;border-bottom:${border};text-align:right;font-weight:600;font-size:13px;width:55%;line-height:1.3;">${formatCurrency(getPriceInclGst(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${border};border-right:${border};font-size:13px;width:45%;line-height:1.3;">Discount <span style="font-size:11px;color:#666;">(${Number(item.discountPercent)}%)</span></td><td style="padding:7px 14px;border-bottom:${border};text-align:right;color:#c00;font-weight:500;font-size:13px;width:55%;line-height:1.3;">-${formatCurrency(getDiscountAmount(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-bottom:${border};border-right:${border};font-size:13px;width:45%;line-height:1.3;">Units</td><td style="padding:7px 14px;border-bottom:${border};text-align:right;font-weight:500;font-size:13px;width:55%;line-height:1.3;">${item.quantity}</td></tr>
+      <tr style="background-color:#f9f9f9;"><td style="padding:7px 14px;border-bottom:${border};border-right:${border};font-weight:600;font-size:13px;width:45%;line-height:1.3;">Final Price<br><span style="font-size:10px;color:#555;font-weight:500;">(incl. of gst)</span></td><td style="padding:7px 14px;border-bottom:${border};text-align:right;font-weight:600;font-size:14px;width:55%;line-height:1.3;">${formatCurrency(getTotalInclGst(item))}</td></tr>
+      <tr><td style="padding:7px 14px;border-right:${border};font-size:13px;width:45%;line-height:1.3;">Quotation No</td><td style="padding:7px 14px;text-align:right;font-weight:600;font-size:11px;width:55%;line-height:1.3;word-wrap:break-word;overflow-wrap:break-word;">${item.projectQuotationNo || index + 1}</td></tr>
     `;
 
       return `
@@ -408,16 +406,22 @@ function buildProjectHTML(project: any): string {
           ${companyHeader()}
           ${clientInfoRow()}
           
-          <div style="display:flex;border-bottom:${border};">
-            <div style="flex:1;padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
-            <div style="width:170px;min-width:170px;display:flex;">
-              <div style="flex:1;padding:7px 2px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;text-align:center;">CODE</div>
-              <div style="flex:1;padding:7px 9px;font-weight:600;font-size:13px;word-break:break-word;">${item.quotationCode || "—"}</div>
-            </div>
-          </div>
+          
           
           <div style="border-bottom:${border};">
             ${selectionsTableHtml}
+          </div>
+
+          <div style="display:flex;border-bottom:${border};">
+            <div style="flex:1;padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;">${item.quotationName || "-"}</div>
+           <div style="width:35%;display:flex;">
+            <div style="padding:7px 14px;border-right:${border};font-weight:600;font-size:14px;background-color:#f9f9f9;text-align:left;width:45%;">
+              CODE
+            </div>
+            <div style="padding:7px 14px;font-weight:600;font-size:13px;word-break:break-word;width:55%;">
+              ${item.quotationCode || "—"}
+            </div>
+          </div>
           </div>
           
           <div style="display:flex;border-bottom:${border};">
@@ -445,7 +449,7 @@ function buildProjectHTML(project: any): string {
             </div>
           </div>
           
-          <div style="border-bottom:${border};display:flex;">
+          <div style="display:flex;">
             <div style="flex:1;padding:11px 17px;border-right:${border};">
               <div style="font-size:13px;color:#666;margin-bottom:3px;">Customer Signature</div>
               <div style="height:32px;border-bottom:1px solid #ddd;margin-top:6px;"></div>
@@ -518,8 +522,19 @@ async function getBrowser(): Promise<Browser> {
 }
 
 export async function generateProjectPDF(project: any): Promise<string> {
+  const { sanitizeSegment, getDateStamp, getUniqueNo } = require("./pdfPrintLog.service");
+
+  // Remove any existing PDF file for this project ID first to avoid duplicates
+  deleteProjectPDF(project.id);
+
+  const projectName = sanitizeSegment(project.projectName || "Project");
+  const now = new Date(project.date ? `${project.date}T00:00:00` : new Date());
+  const dateStamp = getDateStamp(now);
+  const uniqueNo = getUniqueNo(new Date(project.createdAt || new Date()));
+  const fileName = `esipl_${projectName}_${dateStamp}_${uniqueNo}_${project.id}.pdf`;
+  const pdfPath = path.join(PDF_DIR, fileName);
+
   const html = buildProjectHTML(project);
-  const pdfPath = path.join(PDF_DIR, `${project.id}.pdf`);
 
   let page: any = null;
   let retryCount = 0;
@@ -581,18 +596,32 @@ export async function generateProjectPDF(project: any): Promise<string> {
 }
 
 export function getProjectPDFPath(projectId: string): string {
-  return path.join(PDF_DIR, `${projectId}.pdf`);
+  if (!fs.existsSync(PDF_DIR)) {
+    fs.mkdirSync(PDF_DIR, { recursive: true });
+  }
+  const files = fs.readdirSync(PDF_DIR);
+  const matched = files.find((f) => f.endsWith(`_${projectId}.pdf`));
+  if (matched) {
+    return path.join(PDF_DIR, matched);
+  }
+  return path.join(PDF_DIR, `temp_${projectId}.pdf`);
 }
 
 export function projectPDFExists(projectId: string): boolean {
-  return fs.existsSync(getProjectPDFPath(projectId));
+  const p = getProjectPDFPath(projectId);
+  return fs.existsSync(p) && !p.endsWith(`temp_${projectId}.pdf`);
 }
 
 export function deleteProjectPDF(projectId: string): void {
   const p = getProjectPDFPath(projectId);
-  if (fs.existsSync(p)) {
+  if (fs.existsSync(p) && !p.endsWith(`temp_${projectId}.pdf`)) {
     fs.unlinkSync(p);
     logger.info(`PDF deleted → ${p}`);
+  }
+  const oldPath = path.join(PDF_DIR, `${projectId}.pdf`);
+  if (fs.existsSync(oldPath)) {
+    fs.unlinkSync(oldPath);
+    logger.info(`Old style PDF deleted → ${oldPath}`);
   }
 }
 

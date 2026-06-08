@@ -36,6 +36,12 @@ router.get(
 );
 
 router.get(
+  "/pdf-logs/:logId/download",
+  requirePermission(PERMISSIONS.PROJECT_VIEW),
+  projectController.downloadLoggedPDF
+);
+
+router.get(
   "/:id",
   requirePermission(PERMISSIONS.PROJECT_VIEW),
   projectController.getById

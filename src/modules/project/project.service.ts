@@ -25,6 +25,7 @@ import {
   getProjectPDFPath,
   projectPDFExists,
 } from "../../services/pdf.service";
+import { pdfPrintLogService } from "../../services/pdfPrintLog.service";
 
 const projectIncludes: Includeable[] = [
   {
@@ -315,6 +316,11 @@ class ProjectService {
     // ★ Regenerate PDF (status may appear on the doc later)
     this.triggerPDFGeneration(id);
 
+    if (status === "sent") {
+      const fullProject = await this.findById(id);
+      await pdfPrintLogService.createSnapshot(fullProject, null);
+    }
+
     return this.findById(id);
   }
 
@@ -456,6 +462,8 @@ async duplicate(id: string) {
     }
   }
 
+
+
   async sendProjectEmail(
     projectId: string,
     emailData: {
@@ -484,6 +492,7 @@ async duplicate(id: string) {
       projectNo: project.projectNo,
       projectId: project.id,
       customerName: customer?.name || "Unknown",
+      projectName: project.projectName || "Project",
       date: project.date,
       salesPersonName: salesPerson?.name || "N/A",
       items: (project.items || []).map((item: any) => ({
@@ -497,6 +506,7 @@ async duplicate(id: string) {
       cgst: Number(project.cgst) || 0,
       sgst: Number(project.sgst) || 0,
       grandTotalWithGst: Number(project.grandTotalWithGst) || 0,
+      totalDiscount: Number(project.totalDiscount) || 0,
     };
 
     const emailType =
@@ -516,6 +526,8 @@ async duplicate(id: string) {
     if (project.status === "draft") {
       await project.update({ status: "sent" });
     }
+    const refreshedProject = await this.findById(projectId);
+    await pdfPrintLogService.createSnapshot(refreshedProject, userId);
 
     // ★ Fire-and-forget: send emails in background
     this.sendProjectEmailsInBackground(

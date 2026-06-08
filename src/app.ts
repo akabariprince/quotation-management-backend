@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import hpp from 'hpp';
 import path from 'path';
+import fs from 'fs';
 import { env } from './config/environment';
 import { globalRateLimiter } from './middleware/rateLimiter.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -45,6 +46,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Disposition'],
   })
 );
 app.use(hpp());
@@ -115,6 +117,18 @@ app.use(
     },
   })
 );
+app.get("/uploads/pdfs/:projectId.pdf", (req, res, next) => {
+  const { projectId } = req.params;
+  const { getProjectPDFPath } = require("./services/pdf.service");
+  try {
+    const pdfPath = getProjectPDFPath(projectId);
+    if (fs.existsSync(pdfPath) && !pdfPath.endsWith(`temp_${projectId}.pdf`)) {
+      return res.sendFile(pdfPath);
+    }
+  } catch (err) {}
+  next();
+});
+
 app.use(
   "/uploads/pdfs",
   express.static(path.join(process.cwd(), "uploads", "pdfs")),

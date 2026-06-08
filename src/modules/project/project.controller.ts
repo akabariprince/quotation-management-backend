@@ -1,10 +1,13 @@
 // src/modules/project/project.controller.ts
+// src/modules/project/project.controller.ts
 
 import { Request, Response } from "express";
 import fs from "fs";
 import { projectService } from "./project.service";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { pdfPrintLogService, sanitizeSegment, getDateStamp, getUniqueNo } from "../../services/pdfPrintLog.service";
+import PdfPrintLog from "../../models/PdfPrintLog.model";
 
 class ProjectController {
   getAll = asyncHandler(async (req: Request, res: Response) => {
@@ -60,22 +63,22 @@ class ProjectController {
     res.status(201).json(ApiResponse.created(project, "Project duplicated"));
   });
 
-sendEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { sendToCustomer, subject, message, type, userId } = req.body;
+  sendEmail = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { sendToCustomer, subject, message, type, userId } = req.body;
 
-  const result = await projectService.sendProjectEmail(
-    id as string,
-    {
-      sendToCustomer: sendToCustomer === true,
-      subject,
-      message,
-      type: type || "sent",
-    },
-    userId,
-  );
-  res.json(ApiResponse.success(result, "Email sent successfully"));
-});
+    const result = await projectService.sendProjectEmail(
+      id as string,
+      {
+        sendToCustomer: sendToCustomer === true,
+        subject,
+        message,
+        type: type || "sent",
+      },
+      userId,
+    );
+    res.json(ApiResponse.success(result, "Email sent successfully"));
+  });
 
   downloadPDF = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -83,8 +86,39 @@ sendEmail = asyncHandler(async (req: Request, res: Response) => {
     // Ensure the project exists
     const project = await projectService.findById(id as string);
 
-    // Generate on-demand if it doesn't exist yet
-    const pdfPath = await projectService.ensurePDF(id as string);
+    let pdfPath: string;
+    let filename: string;
+
+    // Look for latest printed PDF snapshot log first (if exists on disk, use it)
+    const latestLog = await PdfPrintLog.findOne({
+      where: { projectId: id },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (latestLog && fs.existsSync(latestLog.filePath)) {
+      pdfPath = latestLog.filePath;
+      const projectName = sanitizeSegment(project.projectName || "Project");
+      const dateStamp = getDateStamp(new Date(latestLog.createdAt));
+      const uniqueNo = latestLog.uniqueNo;
+      filename = `esipl_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+    } else if (project.status === "sent") {
+      const log = await pdfPrintLogService.createSnapshot(
+        project,
+        req.user?.id || null,
+      );
+      pdfPath = log.filePath;
+      const projectName = sanitizeSegment(project.projectName || "Project");
+      const dateStamp = getDateStamp(new Date(log.createdAt));
+      const uniqueNo = log.uniqueNo;
+      filename = `esipl_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+    } else {
+      pdfPath = await projectService.ensurePDF(id as string);
+      const projectName = sanitizeSegment(project.projectName || "Project");
+      const now = new Date(project.date ? `${project.date}T00:00:00` : new Date());
+      const dateStamp = getDateStamp(now);
+      const uniqueNo = getUniqueNo(new Date(project.createdAt || new Date()));
+      filename = `esipl_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+    }
 
     if (!fs.existsSync(pdfPath)) {
       return res
@@ -95,7 +129,6 @@ sendEmail = asyncHandler(async (req: Request, res: Response) => {
     }
 
     const stat = fs.statSync(pdfPath);
-    const filename = `${project.projectNo || id}.pdf`;
 
     // Set proper headers for file download
     res.setHeader("Content-Type", "application/pdf");
@@ -105,7 +138,6 @@ sendEmail = asyncHandler(async (req: Request, res: Response) => {
     // Stream the file
     const stream = fs.createReadStream(pdfPath);
     stream.pipe(res);
-
     stream.on("error", (err) => {
       console.error("Stream error:", err);
       if (!res.headersSent) {
@@ -128,6 +160,32 @@ sendEmail = asyncHandler(async (req: Request, res: Response) => {
         "PDF regenerated successfully",
       ),
     );
+  });
+
+  downloadLoggedPDF = asyncHandler(async (req: Request, res: Response) => {
+    const log = await pdfPrintLogService.getLogById(req.params.logId as string);
+
+    if (!fs.existsSync(log.filePath)) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Stored PDF not found", 404));
+    }
+
+    const stat = fs.statSync(log.filePath);
+    const projectName = sanitizeSegment(log.projectName || "Project");
+    const dateStamp = getDateStamp(new Date(log.createdAt));
+    const uniqueNo = log.uniqueNo;
+    const filename = `esipl_${projectName}_${dateStamp}_${uniqueNo}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Length", stat.size);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`,
+    );
+
+    const stream = fs.createReadStream(log.filePath);
+    stream.pipe(res);
   });
 }
 

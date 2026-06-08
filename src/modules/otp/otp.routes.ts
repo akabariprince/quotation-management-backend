@@ -53,4 +53,10 @@ router.post(
   otpController.resend
 );
 
+// Get status
+router.get(
+  "/:id/status",
+  otpController.getStatus
+);
+
 export default router;

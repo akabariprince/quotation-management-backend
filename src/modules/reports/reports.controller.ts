@@ -101,6 +101,16 @@ class ReportsController {
     },
   );
 
+  getPdfPrintReport = asyncHandler(async (req: Request, res: Response) => {
+    const { startDate, endDate, search } = req.query;
+    const filters: any = {};
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    if (search) filters.search = search;
+    const result = await reportsService.getPdfPrintReport(filters);
+    res.json(ApiResponse.success(result, "PDF print report fetched"));
+  });
+
   getDetailedQuotationReport = asyncHandler(
     async (req: Request, res: Response) => {
       const { projectId } = req.params;

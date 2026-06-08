@@ -101,6 +101,12 @@ class OTPService {
     };
   }
 
+  async findById(id: string) {
+    const otpLog = await OTPLog.findByPk(id);
+    if (!otpLog) throw new Error("OTP record not found");
+    return otpLog;
+  }
+
   // ─── Approve OTP (with code verification) ─────────────────────────
 
   async approveOTP(id: string, otp: string, approverId: string) {
