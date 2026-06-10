@@ -25,10 +25,11 @@ class ReportsService {
     try {
       const [totalProjects, totalCustomers, totalRevenue, statusCounts] =
         await Promise.all([
-          Project.count(),
+          Project.count({ where: { status: { [Op.ne]: "rejected" } } }),
           Customer.count(),
-          Project.sum("grandTotalWithGst"),
+          Project.sum("grandTotalWithGst", { where: { status: { [Op.in]: ["approved", "po"] } } }),
           Project.findAll({
+            where: { status: { [Op.ne]: "rejected" } },
             attributes: [
               "status",
               [fn("COUNT", col("Project.id")), "count"],
@@ -62,7 +63,11 @@ class ReportsService {
       if (query.startDate && query.endDate) {
         where.date = { [Op.between]: [query.startDate, query.endDate] };
       }
-      if (query.status && query.status !== "all") where.status = query.status;
+      if (query.status && query.status !== "all") {
+        where.status = query.status;
+      } else {
+        where.status = { [Op.ne]: "rejected" };
+      }
       if (query.salesPersonId) where.salesPersonId = query.salesPersonId;
       if (query.customerId) where.customerId = query.customerId;
       if (query.projectName) {
@@ -141,12 +146,13 @@ class ReportsService {
       const statusColors: Record<string, string> = {
         draft: "#6B7280",
         sent: "#A16207",
-        approved: "#166534",
+        approved: "#D97706",
         expired: "#DC2626",
+        po: "#166534",
       };
       const statusDistribution = Object.entries(statusMap).map(
         ([name, value]) => ({
-          name: name.charAt(0).toUpperCase() + name.slice(1),
+          name: name === "po" ? "PO" : name.charAt(0).toUpperCase() + name.slice(1),
           value,
           color: statusColors[name] || "#6B7280",
         }),
@@ -185,7 +191,7 @@ class ReportsService {
   /* ─── 3. CONVERSION REPORT ─── */
   async getConversionReport(query: any) {
     try {
-      const where: any = {};
+      const where: any = { status: { [Op.ne]: "rejected" } };
       if (query.startDate && query.endDate) {
         where.date = { [Op.between]: [query.startDate, query.endDate] };
       }
@@ -205,9 +211,9 @@ class ReportsService {
         order: [["date", "DESC"]],
       });
 
-      const converted = projects.filter((p) => p.status === "approved");
+      const converted = projects.filter((p) => p.status === "po");
       const pending = projects.filter(
-        (p) => p.status !== "approved" && p.status !== "expired",
+        (p) => p.status !== "po" && p.status !== "expired",
       );
       const expired = projects.filter((p) => p.status === "expired");
 
@@ -242,13 +248,13 @@ class ReportsService {
         customerId: p.customerId,
         quoteAmount: Number(p.grandTotalWithGst) || 0,
         orderNo:
-          p.status === "approved"
+          p.status === "po"
             ? `ORD-${p.projectNo.replace(/\D/g, "")}`
             : null,
         orderAmount:
-          p.status === "approved" ? Number(p.grandTotalWithGst) || 0 : null,
+          p.status === "po" ? Number(p.grandTotalWithGst) || 0 : null,
         status:
-          p.status === "approved"
+          p.status === "po"
             ? "Converted"
             : p.status === "expired"
               ? "Lost"
@@ -269,7 +275,7 @@ class ReportsService {
   async getPendingQuotationReport(query: any) {
     try {
       const where: any = {
-        status: { [Op.in]: ["draft", "sent"] },
+        status: "approved",
       };
       if (query.startDate && query.endDate) {
         where.date = { [Op.between]: [query.startDate, query.endDate] };
@@ -326,8 +332,8 @@ class ReportsService {
             )
             : 0,
         overdueCount: data.filter((d) => d.daysPending > 7).length,
-        draftCount: data.filter((d) => d.status === "draft").length,
-        sentCount: data.filter((d) => d.status === "sent").length,
+        draftCount: 0,
+        sentCount: 0,
       };
 
       return { data, summary };
@@ -340,7 +346,7 @@ class ReportsService {
   /* ─── 5. SALESMAN PERFORMANCE REPORT ─── */
   async getSalesmanPerformanceReport(query: any) {
     try {
-      const where: any = { salesPersonId: { [Op.ne]: null } };
+      const where: any = { salesPersonId: { [Op.ne]: null }, status: { [Op.ne]: "rejected" } };
       if (query.startDate && query.endDate) {
         where.date = { [Op.between]: [query.startDate, query.endDate] };
       }
@@ -366,7 +372,7 @@ class ReportsService {
           [fn("COUNT", col("Project.id")), "converted"],
           [fn("SUM", col("Project.grand_total_with_gst")), "convertedRevenue"],
         ],
-        where: { ...where, status: "approved" },
+        where: { ...where, status: "po" },
         group: ["salesPersonId"],
         raw: true,
       })) as any[];
@@ -421,7 +427,7 @@ class ReportsService {
 
       const summary = {
         totalSalespeople: data.length,
-        totalRevenue: data.reduce((s, d) => s + d.totalRevenue, 0),
+        totalRevenue: data.reduce((s, d) => s + d.convertedRevenue, 0),
         avgConversion:
           data.length > 0
             ? Math.round(
@@ -445,6 +451,7 @@ class ReportsService {
       // No customer selected → return customer list with summaries
       if (!customerId) {
         const customerSummaries = await Project.findAll({
+          where: { status: { [Op.ne]: "rejected" } },
           attributes: [
             "customerId",
             [fn("COUNT", col("Project.id")), "totalQuotations"],
@@ -508,7 +515,7 @@ class ReportsService {
       const customer = await Customer.findByPk(customerId);
       if (!customer) throw new Error("Customer not found");
 
-      const projectWhere: any = { customerId };
+      const projectWhere: any = { customerId, status: { [Op.ne]: "rejected" } };
       if (startDate && endDate) {
         projectWhere.date = { [Op.between]: [startDate, endDate] };
       }
@@ -545,11 +552,10 @@ class ReportsService {
 
       const summary = {
         totalQuotations: projects.length,
-        totalOrders: projects.filter((p) => p.status === "approved").length,
-        totalRevenue: projects.reduce(
-          (s, p) => s + (Number(p.grandTotalWithGst) || 0),
-          0,
-        ),
+        totalOrders: projects.filter((p) => p.status === "po").length,
+        totalRevenue: projects
+          .filter((p) => ["approved", "po"].includes(p.status))
+          .reduce((s, p) => s + (Number(p.grandTotalWithGst) || 0), 0),
         totalDiscount: projects.reduce(
           (s, p) => s + (Number(p.totalDiscount) || 0),
           0,
@@ -605,7 +611,7 @@ class ReportsService {
   /* ─── 7. PRODUCT REPORT ─── */
   async getProductReport(query: any) {
     try {
-      const projectWhere: any = {};
+      const projectWhere: any = { status: { [Op.ne]: "rejected" } };
       if (query.startDate && query.endDate) {
         projectWhere.date = {
           [Op.between]: [query.startDate, query.endDate],
@@ -726,7 +732,7 @@ class ReportsService {
   /* ─── 8. DISCOUNT APPROVAL REPORT ─── */
   async getDiscountApprovalReport(query: any) {
     try {
-      const projectWhere: any = {};
+      const projectWhere: any = { status: { [Op.ne]: "rejected" } };
       if (query.startDate && query.endDate) {
         projectWhere.date = {
           [Op.between]: [query.startDate, query.endDate],
@@ -773,8 +779,6 @@ class ReportsService {
       });
 
       // ═══ FIX: Fetch OTP logs WITHOUT eager-loading User ═══
-      // Then resolve user names separately to avoid the
-      // "associated multiple times" Sequelize error
       const otpWhere: any = { type: "discount" };
       if (query.startDate && query.endDate) {
         otpWhere.createdAt = {

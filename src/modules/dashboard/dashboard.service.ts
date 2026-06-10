@@ -10,7 +10,9 @@ class DashboardService {
   async getDashboardStats() {
     const totalCustomers = await Customer.count();
     const totalQuotations = await Quotation.count();
-    const totalProjects = await Project.count();
+    const totalProjects = await Project.count({
+      where: { status: { [Op.ne]: "rejected" } },
+    });
 
     const projectsByStatus = await Project.findAll({
       attributes: [
@@ -56,7 +58,7 @@ class DashboardService {
       ],
       where: {
         date: { [Op.gte]: sixMonthsAgo },
-        status: { [Op.in]: ["sent", "approved"] },
+        status: { [Op.in]: ["sent", "approved", "po"] },
       },
       group: [
         sequelize.fn("DATE_TRUNC", "month", sequelize.col("date")),
@@ -70,12 +72,13 @@ class DashboardService {
       raw: true,
     });
 
-    // Total project values
     const totalValue =
-      (await Project.sum("grandTotalWithGst")) || 0;
+      (await Project.sum("grandTotalWithGst", {
+        where: { status: { [Op.ne]: "rejected" } },
+      })) || 0;
     const approvedValue =
       (await Project.sum("grandTotalWithGst", {
-        where: { status: "approved" },
+        where: { status: { [Op.in]: ["approved", "po"] } },
       })) || 0;
 
     return {

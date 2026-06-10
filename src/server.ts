@@ -14,6 +14,16 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info("✅ Database connection established successfully");
 
+    // Add 'rejected' and 'po' to the status enum if they don't exist (Postgres-specific)
+    try {
+      await sequelize.query("ALTER TYPE enum_projects_status ADD VALUE IF NOT EXISTS 'rejected'");
+      await sequelize.query("ALTER TYPE enum_projects_status ADD VALUE IF NOT EXISTS 'po'");
+      logger.info("✅ Checked and updated projects status ENUM with 'rejected' and 'po'");
+    } catch (enumErr) {
+      // Ignore errors if the type doesn't exist yet (will be created by sync) or dialect is different
+      logger.warn("Could not alter ENUM type directly: " + (enumErr as Error).message);
+    }
+
     // ============================================================
     // AUTO SYNC - This is the magic!
     // ============================================================

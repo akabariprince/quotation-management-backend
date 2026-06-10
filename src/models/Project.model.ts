@@ -24,7 +24,7 @@ export interface ProjectAttributes {
   deliveryState: string | null;
   deliveryPincode: string | null;
 
-  status: "draft" | "sent" | "approved" | "expired";
+  status: "draft" | "sent" | "approved" | "expired" | "rejected" | "po";
 
   createdAt: Date;
   updatedAt: Date;
@@ -81,7 +81,7 @@ class Project
   public deliveryState!: string | null;
   public deliveryPincode!: string | null;
 
-  public status!: "draft" | "sent" | "approved" | "expired";
+  public status!: "draft" | "sent" | "approved" | "expired" | "rejected" | "po";
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -207,7 +207,7 @@ Project.init(
     },
 
     status: {
-      type: DataTypes.ENUM("draft", "sent", "approved", "expired"),
+      type: DataTypes.ENUM("draft", "sent", "approved", "expired", "rejected", "po"),
       allowNull: false,
       defaultValue: "draft",
     },

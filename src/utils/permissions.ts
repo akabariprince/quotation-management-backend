@@ -23,6 +23,7 @@ export const PERMISSIONS = {
   PROJECT_DELETE: "project:delete",
   PROJECT_APPROVE: "project:approve",
   PROJECT_SEND: "project:send",
+  PROJECT_SEND_CUSTOMER: "project:send_customer",
 
   // ─── User Management ─────────────────────────────────────────────
   USER_VIEW: "user:view",
@@ -154,6 +155,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "project:delete": "Delete Project",
   "project:approve": "Approve Project",
   "project:send": "Send Project",
+  "project:send_customer": "Send Project Email to Customer",
 
   "user:view": "View Users",
   "user:create": "Create User",
@@ -205,6 +207,7 @@ export const PERMISSION_GROUPS: Record<string, string[]> = {
     "project:delete",
     "project:approve",
     "project:send",
+    "project:send_customer",
   ],
   Users: ["user:view", "user:create", "user:edit", "user:delete"],
   Roles: ["role:view", "role:create", "role:edit", "role:delete"],

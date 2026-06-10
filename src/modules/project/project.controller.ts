@@ -8,6 +8,7 @@ import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { pdfPrintLogService, sanitizeSegment, getDateStamp, getUniqueNo } from "../../services/pdfPrintLog.service";
 import PdfPrintLog from "../../models/PdfPrintLog.model";
+import { ApiError } from "../../utils/ApiError";
 
 class ProjectController {
   getAll = asyncHandler(async (req: Request, res: Response) => {
@@ -66,6 +67,17 @@ class ProjectController {
   sendEmail = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { sendToCustomer, subject, message, type, userId } = req.body;
+
+    if (sendToCustomer === true) {
+      const userPermissions = (req as any).user?.permissions || [];
+      const roleName = (req as any).user?.roleName;
+      const isUserAdmin = roleName === "admin";
+      const hasSendCustomerPermission = isUserAdmin || userPermissions.includes("project:send_customer");
+
+      if (!hasSendCustomerPermission) {
+        throw ApiError.forbidden("You do not have permission to send emails to customers");
+      }
+    }
 
     const result = await projectService.sendProjectEmail(
       id as string,

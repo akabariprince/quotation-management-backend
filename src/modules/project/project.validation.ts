@@ -61,7 +61,7 @@ const createProjectBody = z.object({
   deliveryCity: z.string().max(100).nullable().optional(),
   deliveryState: z.string().max(100).nullable().optional(),
   deliveryPincode: z.string().max(10).nullable().optional(),
-  status: z.enum(["draft", "sent", "approved", "expired"]).default("draft"),
+  status: z.enum(["draft", "sent", "approved", "expired", "rejected", "po"]).default("draft"),
   items: z.array(projectItemSchema).min(1, "At least one item is required"),
 });
 
@@ -70,7 +70,7 @@ const updateProjectBody = createProjectBody.partial();
 
 // ✅ Update status body schema
 const updateStatusBody = z.object({
-  status: z.enum(["draft", "sent", "approved", "expired"]),
+  status: z.enum(["draft", "sent", "approved", "expired", "rejected", "po"]),
 });
 
 // ✅ Export wrapped schemas (for validation middleware)
