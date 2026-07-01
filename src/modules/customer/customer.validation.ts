@@ -3,6 +3,7 @@ import { z } from "zod";
 const customerBody = z.object({
   name: z.string().min(1, "Name is required").max(150),
   mobile: z.string().min(10, "Valid mobile is required").max(20),
+  verificationOtpLogId: z.string().uuid().optional().nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().optional().nullable(),
   gstin: z.string().max(15).optional().nullable(),
@@ -22,3 +23,17 @@ const customerBody = z.object({
 
 export const createCustomerSchema = z.object({ body: customerBody });
 export const updateCustomerSchema = z.object({ body: customerBody.partial() });
+
+export const requestCustomerMobileOTPSchema = z.object({
+  body: z.object({
+    mobile: z.string().min(10, "Valid mobile is required").max(20),
+  }),
+});
+
+export const verifyCustomerMobileOTPSchema = z.object({
+  body: z.object({
+    mobile: z.string().min(10, "Valid mobile is required").max(20),
+    otp: z.string().length(6, "OTP must be 6 digits"),
+    otpLogId: z.string().uuid("Invalid OTP log ID"),
+  }),
+});

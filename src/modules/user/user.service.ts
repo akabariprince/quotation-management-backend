@@ -3,10 +3,60 @@ import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import User from '../../models/User.model';
 import Role from '../../models/Role.model';
+import OTPLog from '../../models/OTPLog.model';
 import { ApiError } from '../../utils/ApiError';
 import { parsePagination, buildPaginationMeta } from '../../utils/pagination.utils';
+import { env } from '../../config/environment';
+import { generateOTP, hashOTP, isOTPExpired, verifyOTP } from '../../utils/otp.utils';
+import { notificationService } from '../../services/notification.service';
+import { NOTIFICATION_TYPES } from '../../services/notification.constants';
 
 class UserService {
+  private normalizeMobile(mobile: string) {
+    let normalized = mobile.trim().replace(/\s+/g, "");
+    if (!normalized.startsWith("+")) {
+      const digits = normalized.replace(/\D/g, "");
+      normalized = digits.length === 10 ? `+91${digits}` : `+${digits}`;
+    }
+    return normalized;
+  }
+
+  private async consumeVerification(
+    mobile?: string | null,
+    verificationOtpLogId?: string | null,
+  ) {
+    if (!mobile || !verificationOtpLogId) {
+      return {
+        whatsappVerified: false,
+        whatsappVerifiedAt: null,
+        whatsappVerifiedMobile: null,
+      };
+    }
+
+    const otpLog = await OTPLog.findOne({
+      where: {
+        id: verificationOtpLogId,
+        email: mobile,
+        type: "user_mobile_verification",
+        status: "approved",
+      },
+    });
+
+    if (!otpLog) {
+      return {
+        whatsappVerified: false,
+        whatsappVerifiedAt: null,
+        whatsappVerifiedMobile: null,
+      };
+    }
+
+    return {
+      whatsappVerified: true,
+      whatsappVerifiedAt: otpLog.approvedAt || new Date(),
+      whatsappVerifiedMobile: mobile,
+    };
+  }
+
   async findAll(query: any) {
     const pagination = parsePagination(query, 'createdAt', [
       'createdAt', 'name', 'email',
@@ -42,7 +92,7 @@ class UserService {
   async getSalesPersons() {
     return User.findAll({
       where: { isActive: true },
-      attributes: ['id', 'name', 'email'],
+      attributes: ['id', 'name', 'email', 'mobile', 'whatsappVerified', 'whatsappVerifiedAt', 'whatsappVerifiedMobile'],
       include: [
         { model: Role, as: 'role', attributes: ['id', 'name', 'displayName'] },
       ],
@@ -62,19 +112,32 @@ class UserService {
   }
 
   async create(data: any) {
+    delete data.whatsappVerified;
+    delete data.whatsappVerifiedAt;
+    delete data.whatsappVerifiedMobile;
     const existingUser = await User.findOne({ where: { email: data.email } });
     if (existingUser) throw ApiError.conflict('Email already exists');
 
     const role = await Role.findByPk(data.roleId);
     if (!role) throw ApiError.badRequest('Invalid role ID');
 
+    const normalizedMobile = data.mobile ? this.normalizeMobile(data.mobile) : null;
+    const verification = await this.consumeVerification(
+      normalizedMobile,
+      data.verificationOtpLogId,
+    );
     const hashedPassword = await bcrypt.hash(data.password, 12);
-    const user = await User.create({ ...data, password: hashedPassword });
+    const createData = { ...data, password: hashedPassword, mobile: normalizedMobile };
+    delete createData.verificationOtpLogId;
+    const user = await User.create({ ...createData, ...verification });
 
     return this.findById(user.id);
   }
 
   async update(id: string, data: any) {
+    delete data.whatsappVerified;
+    delete data.whatsappVerifiedAt;
+    delete data.whatsappVerifiedMobile;
     const user = await User.findByPk(id);
     if (!user) throw ApiError.notFound('User not found');
 
@@ -93,6 +156,29 @@ class UserService {
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 12);
     }
+
+    if (data.mobile !== undefined) {
+      const normalizedMobile = data.mobile ? this.normalizeMobile(data.mobile) : null;
+      data.mobile = normalizedMobile;
+
+      if (normalizedMobile !== user.mobile) {
+        Object.assign(
+          data,
+          await this.consumeVerification(normalizedMobile, data.verificationOtpLogId),
+        );
+      } else {
+        delete data.verificationOtpLogId;
+      }
+    }
+
+    if (!("mobile" in data) && data.verificationOtpLogId && user.mobile) {
+      Object.assign(
+        data,
+        await this.consumeVerification(user.mobile, data.verificationOtpLogId),
+      );
+    }
+
+    delete data.verificationOtpLogId;
 
     await user.update(data);
     return this.findById(id);
@@ -123,6 +209,97 @@ class UserService {
     }
 
     await user.destroy();
+  }
+
+  async requestMobileOTP(mobile: string, requestedBy?: string) {
+    const normalizedMobile = this.normalizeMobile(mobile);
+
+    await OTPLog.update(
+      { status: "expired" },
+      {
+        where: {
+          email: normalizedMobile,
+          type: "user_mobile_verification",
+          status: "pending",
+        },
+      },
+    );
+
+    const otp = generateOTP();
+    const otpHash = await hashOTP(otp);
+    const expiresAt = new Date(Date.now() + env.otp.expiryMinutes * 60 * 1000);
+
+    const otpLog = await OTPLog.create({
+      type: "user_mobile_verification",
+      entityType: "user",
+      email: normalizedMobile,
+      otpHash,
+      requestedBy: requestedBy || null,
+      status: "pending",
+      attempts: 0,
+      maxAttempts: 5,
+      expiresAt,
+    });
+
+    await notificationService.dispatchWhatsApp({
+      notificationType: NOTIFICATION_TYPES.userOtpVerification,
+      recipient: normalizedMobile,
+      subject: "User mobile verification OTP",
+      toPhone: normalizedMobile,
+      templateParameters: [otp],
+      referenceId: otpLog.id,
+      referenceType: "otp_log",
+      sentBy: requestedBy || null,
+      requestPayload: { mobile: normalizedMobile },
+    });
+
+    return {
+      otpLogId: otpLog.id,
+      expiresAt,
+      mobile: normalizedMobile,
+    };
+  }
+
+  async verifyMobileOTP(mobile: string, otp: string, otpLogId: string) {
+    const normalizedMobile = this.normalizeMobile(mobile);
+    const otpLog = await OTPLog.findOne({
+      where: {
+        id: otpLogId,
+        email: normalizedMobile,
+        type: "user_mobile_verification",
+        status: "pending",
+      },
+    });
+
+    if (!otpLog) throw ApiError.badRequest("Invalid OTP request");
+
+    if (isOTPExpired(otpLog.createdAt, env.otp.expiryMinutes)) {
+      await otpLog.update({ status: "expired" });
+      throw ApiError.badRequest("OTP has expired");
+    }
+
+    if (otpLog.maxAttempts > 0 && otpLog.attempts >= otpLog.maxAttempts) {
+      await otpLog.update({ status: "expired" });
+      throw ApiError.badRequest("Maximum OTP attempts exceeded");
+    }
+
+    const isValid = await verifyOTP(otp, otpLog.otpHash);
+    if (!isValid) {
+      await otpLog.update({ attempts: otpLog.attempts + 1 });
+      throw ApiError.badRequest("Invalid OTP");
+    }
+
+    await otpLog.update({
+      status: "approved",
+      approvedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      otpLogId: otpLog.id,
+      verifiedMobile: normalizedMobile,
+      verifiedAt: otpLog.approvedAt,
+    };
   }
 }
 

@@ -1,6 +1,6 @@
 // src/modules/auth/auth.service.ts
 import bcrypt from "bcryptjs";
-import { User, Role, OTPLog, EmailLog } from "../../models";
+import { User, Role, OTPLog } from "../../models";
 import { ApiError } from "../../utils/ApiError";
 import {
   generateTokens,
@@ -17,8 +17,70 @@ import { sendOTPEmail, sendLoginNotificationEmail } from "../../services/email.s
 import { env } from "../../config/environment";
 import { Op } from "sequelize";
 import { logger } from "../../utils/logger";
+import { notificationService } from "../../services/notification.service";
+import { NOTIFICATION_TYPES } from "../../services/notification.constants";
 
 export class AuthService {
+  private buildOtpEmailContext(
+    type: "login" | "discount" | "master_activation",
+    metadata?: Record<string, any>,
+  ) {
+    if (type === "discount") {
+      return {
+        description:
+          "An OTP has been requested to approve a discount override outside the allowed role range.",
+        infoRows: [
+          ...(metadata?.projectNo
+            ? [{ label: "Project No", value: `<strong>${metadata.projectNo}</strong>` }]
+            : []),
+          ...(metadata?.customerName
+            ? [{ label: "Customer", value: metadata.customerName }]
+            : []),
+          ...(metadata?.productName
+            ? [{ label: "Product", value: metadata.productName }]
+            : []),
+          ...(metadata?.requestedDiscount
+            ? [{ label: "Requested Discount", value: `${metadata.requestedDiscount}%` }]
+            : []),
+          ...(metadata?.requestedByName
+            ? [{ label: "Requested By", value: metadata.requestedByName }]
+            : []),
+        ],
+      };
+    }
+
+    if (type === "master_activation") {
+      return {
+        description:
+          "An OTP has been requested to activate or update master data in the system.",
+        infoRows: [
+          ...(metadata?.recordType
+            ? [{ label: "Record Type", value: metadata.recordType }]
+            : []),
+          ...(metadata?.recordName
+            ? [{ label: "Record Name", value: metadata.recordName }]
+            : []),
+          ...(metadata?.action
+            ? [{ label: "Action", value: metadata.action }]
+            : []),
+          ...(metadata?.requestedByName
+            ? [{ label: "Updated By", value: metadata.requestedByName }]
+            : []),
+        ],
+      };
+    }
+
+    return undefined;
+  }
+
+  private buildOtpWhatsAppParameters(
+    type: "login" | "discount" | "master_activation",
+    otp: string,
+    metadata?: Record<string, any>,
+  ) {
+    return [otp];
+  }
+
   private buildTokenPayload(user: any): TokenPayload {
     return {
       userId: user.id,
@@ -45,7 +107,9 @@ export class AuthService {
   }
 
   // ★ Helper to get admin emails for login notification
-  private async getAdminEmails(): Promise<string[]> {
+  private async getAdminRecipients(): Promise<
+    Array<{ email: string; mobile: string | null; whatsappVerified: boolean }>
+  > {
     try {
       const adminUsers = await User.findAll({
         where: { isActive: true },
@@ -60,14 +124,33 @@ export class AuthService {
             attributes: ["id", "name"],
           },
         ],
-        attributes: ["id", "email"],
+        attributes: ["id", "email", "mobile", "whatsappVerified"],
       });
 
-      return adminUsers.map((u: any) => u.email).filter(Boolean);
+      return adminUsers
+        .map((u: any) => ({
+          email: u.email,
+          mobile: u.mobile || null,
+          whatsappVerified: Boolean(u.whatsappVerified),
+        }))
+        .filter((u) => u.email);
     } catch (error) {
       logger.error("Failed to fetch admin emails:", error);
       return [];
     }
+  }
+
+  private async getAdminEmails(): Promise<string[]> {
+    const admins = await this.getAdminRecipients();
+    return admins.map((u) => u.email).filter(Boolean);
+  }
+
+  private getOtpNotificationType(
+    type: "login" | "discount" | "master_activation",
+  ) {
+    if (type === "discount") return NOTIFICATION_TYPES.discountApproval;
+    if (type === "master_activation") return NOTIFICATION_TYPES.masterDataChange;
+    return NOTIFICATION_TYPES.adminNotification;
   }
 
   async login(
@@ -139,24 +222,17 @@ export class AuthService {
         // Don't notify admin about their own login
         if (adminEmail === user.email) continue;
 
-        const sent = await sendLoginNotificationEmail(adminEmail, loginData);
-
-        // Log the email
-        await EmailLog.create({
+        await notificationService.dispatchEmail({
+          notificationType: NOTIFICATION_TYPES.loginNotification,
+          recipient: adminEmail,
           toEmail: adminEmail,
           subject: `Login Alert: ${loginData.userName} (${loginData.userRole}) - ESIPL`,
-          type: "login_notification",
           referenceId: user.id,
           referenceType: "user",
-          status: sent ? "sent" : "failed",
           sentBy: user.id,
+          requestPayload: loginData,
+          sendFn: () => sendLoginNotificationEmail(adminEmail, loginData),
         });
-
-        if (!sent) {
-          logger.warn(
-            `Failed to send login notification to ${adminEmail}`
-          );
-        }
       }
     } catch (error) {
       // Never let notification failure break the login flow
@@ -208,7 +284,8 @@ export class AuthService {
     requestedBy?: string,
     entityId?: string,
     entityType?: string,
-    entityName?: string
+    entityName?: string,
+    metadata?: Record<string, any>,
   ) {
     const recentOTP = await OTPLog.findOne({
       where: {
@@ -271,31 +348,68 @@ export class AuthService {
     });
 
     // Get all admin emails
-    const adminEmails = await this.getAdminEmails();
+    const adminRecipients = await this.getAdminRecipients();
 
-    if (adminEmails.length === 0) {
+    if (adminRecipients.length === 0) {
       logger.warn("No admin emails found for OTP notification");
     }
 
-    for (const adminEmail of adminEmails) {
-      const emailSent = await sendOTPEmail(
-        adminEmail,
-        otp,
-        type.replace("_", " ")
-      );
-
-      await EmailLog.create({
-        toEmail: adminEmail,
+    for (const adminRecipient of adminRecipients) {
+      await notificationService.dispatchEmail({
+        notificationType: this.getOtpNotificationType(type),
+        recipient: adminRecipient.email,
+        toEmail: adminRecipient.email,
         subject: `OTP for ${type}`,
-        type: "otp",
         referenceId: otpLog.id,
         referenceType: "otp_log",
-        status: emailSent ? "sent" : "failed",
         sentBy: requestedBy || null,
+        requestPayload: {
+          entityId,
+          entityType,
+          entityName,
+          otpType: type,
+          metadata: metadata || null,
+        },
+        sendFn: () =>
+          sendOTPEmail(
+            adminRecipient.email,
+            otp,
+            type.replace("_", " "),
+            this.buildOtpEmailContext(type, {
+              ...metadata,
+              entityType,
+              entityName,
+            }),
+          ),
       });
 
-      if (!emailSent) {
-        logger.warn(`Failed to send OTP email to ${adminEmail}`);
+      if (
+        type !== "login" &&
+        adminRecipient.mobile &&
+        adminRecipient.whatsappVerified
+      ) {
+        await notificationService.dispatchWhatsApp({
+          notificationType: this.getOtpNotificationType(type),
+          recipient: adminRecipient.mobile,
+          toPhone: adminRecipient.mobile,
+          subject: `OTP for ${type}`,
+          templateParameters: this.buildOtpWhatsAppParameters(type, otp, {
+            ...metadata,
+            entityType,
+            entityName,
+          }),
+          referenceId: otpLog.id,
+          referenceType: "otp_log",
+          sentBy: requestedBy || null,
+          requestPayload: {
+            entityId,
+            entityType,
+            entityName,
+            otpType: type,
+            audience: "admin",
+            metadata: metadata || null,
+          },
+        });
       }
     }
     

@@ -1,6 +1,6 @@
 // src/modules/otp/otp.service.ts
 import { Op } from "sequelize";
-import { OTPLog, User, EmailLog } from "../../models";
+import { OTPLog, User } from "../../models";
 import {
   parsePagination,
   buildPaginationMeta,
@@ -10,6 +10,8 @@ import { sendOTPEmail } from "../../services/email.service";
 import { generateOTP, hashOTP } from "../../utils/otp.utils";
 import { env } from "../../config/environment";
 import { logger } from "../../utils/logger";
+import { notificationService } from "../../services/notification.service";
+import { NOTIFICATION_TYPES } from "../../services/notification.constants";
 
 class OTPService {
   // ─── List All OTP Logs ────────────────────────────────────────────
@@ -322,25 +324,22 @@ class OTPService {
       expiresAt: new Date(Date.now() + env.otp.expiryMinutes * 60 * 1000),
     });
 
-    const emailSent = await sendOTPEmail(
-      otpLog.email,
-      otp,
-      otpLog.type.replace("_", " ")
-    );
-
-    await EmailLog.create({
+    await notificationService.dispatchEmail({
+      notificationType:
+        otpLog.type === "discount"
+          ? NOTIFICATION_TYPES.discountApproval
+          : otpLog.type === "master_activation"
+            ? NOTIFICATION_TYPES.masterDataChange
+            : NOTIFICATION_TYPES.adminNotification,
+      recipient: otpLog.email,
       toEmail: otpLog.email,
       subject: `OTP Resent - ${otpLog.type}`,
-      type: "otp",
       referenceId: otpLog.id,
       referenceType: "otp_log",
-      status: emailSent ? "sent" : "failed",
       sentBy: userId || null,
+      requestPayload: { otpType: otpLog.type },
+      sendFn: () => sendOTPEmail(otpLog.email, otp, otpLog.type.replace("_", " ")),
     });
-
-    if (!emailSent) {
-      logger.warn(`Failed to resend OTP email to ${otpLog.email}`);
-    }
 
     return { message: "OTP resent successfully" };
   }

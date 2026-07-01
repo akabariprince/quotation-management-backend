@@ -5,6 +5,8 @@ export const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().email('Invalid email'),
   password: z.string().min(6, 'Min 6 characters'),
+  mobile: z.string().min(10).max(20).optional().nullable(),
+  verificationOtpLogId: z.string().uuid().optional().nullable(),
   roleId: z.string().uuid('Invalid role ID'),
   isActive: z.boolean().optional().default(true),
 });
@@ -13,6 +15,8 @@ export const updateUserSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
+  mobile: z.string().min(10).max(20).optional().nullable(),
+  verificationOtpLogId: z.string().uuid().optional().nullable(),
   roleId: z.string().uuid().optional(),
   isActive: z.boolean().optional(),
 });

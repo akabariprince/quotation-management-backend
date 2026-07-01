@@ -15,6 +15,23 @@ class CustomerController {
     res.json(ApiResponse.success(customer));
   });
 
+  requestMobileOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await customerService.requestMobileOTP(
+      req.body.mobile,
+      req.user!,
+    );
+    res.json(ApiResponse.success(result, 'WhatsApp OTP sent'));
+  });
+
+  verifyMobileOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await customerService.verifyMobileOTP(
+      req.body.mobile,
+      req.body.otp,
+      req.body.otpLogId,
+    );
+    res.json(ApiResponse.success(result, 'WhatsApp OTP verified'));
+  });
+
   create = asyncHandler(async (req: Request, res: Response) => {
     const customer = await customerService.create(req.body, req.user!);
     res.status(201).json(ApiResponse.created(customer, 'Customer created'));

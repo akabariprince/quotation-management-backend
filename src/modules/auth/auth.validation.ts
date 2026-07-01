@@ -15,6 +15,9 @@ export const requestOTPSchema = z.object({
   type: z.enum(['login', 'discount', 'master_activation']),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
+  entityName: z.string().optional(),
+  requestedBy: z.string().optional(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
 });
 
 export const verifyOTPSchema = z.object({

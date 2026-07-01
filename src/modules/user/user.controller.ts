@@ -34,6 +34,23 @@ class UserController {
     await userService.delete(req.params.id as string, req.user.userId);
     res.json(ApiResponse.noContent('User deleted'));
   });
+
+  requestMobileOTP = asyncHandler(async (req: any, res: Response) => {
+    const result = await userService.requestMobileOTP(
+      req.body.mobile,
+      req.user?.userId || req.user?.id,
+    );
+    res.json(ApiResponse.success(result, "WhatsApp OTP sent"));
+  });
+
+  verifyMobileOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await userService.verifyMobileOTP(
+      req.body.mobile,
+      req.body.otp,
+      req.body.otpLogId,
+    );
+    res.json(ApiResponse.success(result, "WhatsApp mobile verified"));
+  });
 }
 
 export const userController = new UserController();

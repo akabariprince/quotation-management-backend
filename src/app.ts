@@ -31,6 +31,7 @@ import categoryNoRoutes from './modules/categoryNo/categoryNo.routes';
 import variantRoutes from './modules/variant/variant.routes';
 import settingRoutes from './modules/setting/setting.routes';
 import selectionRoutes from './modules/selection/selection.routes';
+import webhookRoutes from './modules/webhook/webhook.routes';
 
 const app = express();
 
@@ -51,6 +52,11 @@ app.use(
 );
 app.use(hpp());
 app.use(globalRateLimiter);
+app.use(
+  '/api/webhooks',
+  express.raw({ type: 'application/json', limit: '2mb' }),
+  webhookRoutes,
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(

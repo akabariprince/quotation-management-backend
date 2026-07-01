@@ -60,7 +60,7 @@ export const validate = (schema: any) => {
         return;
       }
 
-      const error = directResult.error ?? wrappedResult.error;
+      const error = wrappedResult.error ?? directResult.error;
       const errors = error.issues.map((issue: any) => ({
         field: issue.path.length > 0 ? issue.path.join('.') : 'body',
         message: issue.message,

@@ -8,6 +8,64 @@ import sequelize from "./config/sequelize";
 import "./models";
 // Import seeder
 
+const ensureSchemaUpdates = async () => {
+  try {
+    await sequelize.query(`
+      ALTER TABLE customers
+      ADD COLUMN IF NOT EXISTS whatsapp_verified BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS whatsapp_verified_at TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN IF NOT EXISTS whatsapp_verified_mobile VARCHAR(20) NULL;
+    `);
+
+    await sequelize.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS mobile VARCHAR(20) NULL,
+      ADD COLUMN IF NOT EXISTS whatsapp_verified BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS whatsapp_verified_at TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN IF NOT EXISTS whatsapp_verified_mobile VARCHAR(20) NULL;
+    `);
+
+    await sequelize.query(`
+      ALTER TABLE email_logs
+      ADD COLUMN IF NOT EXISTS channel VARCHAR(20) NOT NULL DEFAULT 'email',
+      ADD COLUMN IF NOT EXISTS recipient VARCHAR(255) NULL,
+      ADD COLUMN IF NOT EXISTS to_phone VARCHAR(32) NULL,
+      ADD COLUMN IF NOT EXISTS provider_message_id VARCHAR(255) NULL,
+      ADD COLUMN IF NOT EXISTS provider_status VARCHAR(50) NULL,
+      ADD COLUMN IF NOT EXISTS request_payload JSONB NULL,
+      ADD COLUMN IF NOT EXISTS response_payload JSONB NULL,
+      ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN IF NOT EXISTS read_at TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN IF NOT EXISTS failed_at TIMESTAMP WITH TIME ZONE NULL;
+    `);
+
+    await sequelize.query(`
+      ALTER TABLE email_logs
+      ALTER COLUMN to_email DROP NOT NULL;
+    `);
+
+    await sequelize.query(`
+      ALTER TABLE email_logs
+      ALTER COLUMN status TYPE VARCHAR(20)
+      USING status::text;
+    `);
+
+    await sequelize.query(`
+      UPDATE email_logs
+      SET recipient = COALESCE(recipient, to_email)
+      WHERE recipient IS NULL;
+    `);
+
+    logger.info("✅ Checked and updated customer/email_log schema additions");
+  } catch (error) {
+    logger.warn(
+      "Could not apply schema updates automatically: " +
+        (error as Error).message,
+    );
+  }
+};
+
 const startServer = async () => {
   try {
     // Test database connection
@@ -23,6 +81,8 @@ const startServer = async () => {
       // Ignore errors if the type doesn't exist yet (will be created by sync) or dialect is different
       logger.warn("Could not alter ENUM type directly: " + (enumErr as Error).message);
     }
+
+    await ensureSchemaUpdates();
 
     // ============================================================
     // AUTO SYNC - This is the magic!

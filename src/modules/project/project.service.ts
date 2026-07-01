@@ -17,6 +17,8 @@ import {
 } from "../../utils/pagination.utils";
 import { logger } from "../../utils/logger";
 import { ProjectEmailData, sendProjectEmail } from "../../services/email.service";
+import { notificationService } from "../../services/notification.service";
+import { NOTIFICATION_TYPES } from "../../services/notification.constants";
 
 // ─── NEW IMPORT ──────────────────────────────────────────
 import {
@@ -35,6 +37,7 @@ const projectIncludes: Includeable[] = [
       "id",
       "name",
       "mobile",
+      "whatsappVerified",
       "email",
       "address",
       "landmark",
@@ -216,8 +219,38 @@ class ProjectService {
       distinct: true,
     });
 
+    const projectIds = rows.map((row) => row.id);
+    const whatsappLogs = projectIds.length
+      ? await EmailLog.findAll({
+          where: {
+            channel: "whatsapp",
+            type: NOTIFICATION_TYPES.projectQuotation,
+            referenceType: "project",
+            referenceId: { [Op.in]: projectIds },
+          },
+          order: [["createdAt", "DESC"]],
+        })
+      : [];
+
+    const whatsappLogMap = new Map<string, any>();
+    for (const log of whatsappLogs) {
+      if (log.referenceId && !whatsappLogMap.has(log.referenceId)) {
+        whatsappLogMap.set(log.referenceId, log);
+      }
+    }
+
+    const data = rows.map((row: any) => {
+      const project = row.toJSON();
+      const whatsappLog = whatsappLogMap.get(project.id);
+      return {
+        ...project,
+        whatsappSent: Boolean(whatsappLog),
+        whatsappStatus: whatsappLog?.status || null,
+      };
+    });
+
     return {
-      data: rows,
+      data,
       meta: buildPaginationMeta(count, pagination.page, pagination.limit),
     };
   }
@@ -469,7 +502,8 @@ class ProjectService {
   async sendProjectEmail(
     projectId: string,
     emailData: {
-      sendToCustomer: boolean;
+      sendToCustomerEmail: boolean;
+      sendToCustomerWhatsApp: boolean;
       subject?: string;
       message?: string;
       type: string;
@@ -536,8 +570,11 @@ class ProjectService {
       projectEmailData,
       emailType,
       emailSubject,
-      emailData.sendToCustomer,
+      emailData.sendToCustomerEmail,
+      emailData.sendToCustomerWhatsApp,
       customer?.email,
+      customer?.mobile,
+      Boolean((customer as any)?.whatsappVerified),
       project.id,
       userId,
     );
@@ -554,45 +591,96 @@ class ProjectService {
     data: ProjectEmailData,
     emailType: "created" | "sent" | "revised" | "approved",
     subject: string,
-    sendToCustomer: boolean,
+    sendToCustomerEmail: boolean,
+    sendToCustomerWhatsApp: boolean,
     customerEmail: string | undefined,
+    customerMobile: string | undefined,
+    customerWhatsAppVerified: boolean,
     projectId: string,
     userId: string,
   ): Promise<void> {
     try {
+      const publicApiBaseUrl = String(process.env.API_BASE_URL || "")
+        .trim()
+        .replace(/\/+$/, "");
+      const isPublicPdfUrlConfigured =
+        Boolean(publicApiBaseUrl) &&
+        !/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?(\/|$)/i.test(
+          publicApiBaseUrl,
+        );
+
       // 1) Always send to admins
       const adminEmails = await this.getAdminEmails();
       for (const adminEmail of adminEmails) {
-        const sent = await sendProjectEmail(
-          adminEmail,
-          { ...data, recipientName: "Admin" },
-          emailType,
-        );
-        await EmailLog.create({
+        await notificationService.dispatchEmail({
+          notificationType: NOTIFICATION_TYPES.projectQuotation,
+          recipient: adminEmail,
           toEmail: adminEmail,
           subject,
-          type: `project_${emailType}`,
           referenceId: projectId,
           referenceType: "project",
-          status: sent ? "sent" : "failed",
           sentBy: userId,
+          requestPayload: { emailType, audience: "admin", projectNo: data.projectNo },
+          sendFn: () =>
+            sendProjectEmail(
+              adminEmail,
+              { ...data, recipientName: "Admin" },
+              emailType,
+            ),
         });
-        if (!sent) logger.warn(`Project email failed → ${adminEmail}`);
       }
 
       // 2) Optionally send to customer
-      if (sendToCustomer && customerEmail) {
-        const sent = await sendProjectEmail(customerEmail, data, emailType);
-        await EmailLog.create({
+      if (sendToCustomerEmail && customerEmail) {
+        await notificationService.dispatchEmail({
+          notificationType: NOTIFICATION_TYPES.projectQuotation,
+          recipient: customerEmail,
           toEmail: customerEmail,
           subject,
-          type: `project_${emailType}`,
           referenceId: projectId,
           referenceType: "project",
-          status: sent ? "sent" : "failed",
           sentBy: userId,
+          requestPayload: { emailType, audience: "customer", projectNo: data.projectNo },
+          sendFn: () => sendProjectEmail(customerEmail, data, emailType),
         });
-        if (!sent) logger.warn(`Project email failed → ${customerEmail}`);
+      }
+
+      if (sendToCustomerWhatsApp && customerMobile && customerWhatsAppVerified) {
+        if (!isPublicPdfUrlConfigured) {
+          logger.warn(
+            `Skipping WhatsApp project quotation for ${projectId} because API_BASE_URL is missing or not publicly accessible`,
+          );
+          return;
+        }
+
+        await notificationService.dispatchWhatsApp({
+          notificationType: NOTIFICATION_TYPES.projectQuotation,
+          recipient: customerMobile,
+          toPhone: customerMobile,
+          subject,
+          referenceId: projectId,
+          referenceType: "project",
+          sentBy: userId,
+          requestPayload: { emailType, audience: "customer", projectNo: data.projectNo },
+          templateParameters: [
+            data.customerName || "",
+            new Intl.NumberFormat("en-IN", {
+              style: "currency",
+              currency: "INR",
+              maximumFractionDigits: 0,
+            }).format(Number(data.grandTotalWithGst) || 0),
+            data.projectNo || "",
+            data.customerName || "",
+            String(data.items?.length || 0),
+            new Intl.NumberFormat("en-IN", {
+              style: "currency",
+              currency: "INR",
+              maximumFractionDigits: 0,
+            }).format(Number(data.grandTotalWithGst) || 0),
+          ],
+          headerDocumentUrl: `${publicApiBaseUrl}/uploads/pdfs/${projectId}.pdf`,
+          headerDocumentFilename: `${data.projectNo || projectId}.pdf`,
+        });
       }
     } catch (error) {
       logger.error("Background project email failed:", error);

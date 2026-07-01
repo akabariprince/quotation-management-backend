@@ -55,7 +55,7 @@ const createProjectBody = z.object({
   sgst: numFieldDefault0,
   grandTotal: numFieldDefault0,
   grandTotalWithGst: numFieldDefault0,
-  projectName: z.string().max(255).optional(),
+  projectName: z.string().max(255).nullable().optional(),
   deliveryAddress: z.string().nullable().optional(),
   deliveryLandmark: z.string().max(255).nullable().optional(),
   deliveryCity: z.string().max(100).nullable().optional(),

@@ -76,8 +76,8 @@ const t = {
   destructive: "#DC2626",
   destructiveBg: "#FEF2F2",
   destructiveBorder: "#FECACA",
-  // Font stack (Inter preferred, system fallbacks)
-  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  // Font stack
+  font: "'Google Sans', 'Product Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 };
 
 // ─── Styled Icon (sharp corners, themed) ─────────────────────────────────
@@ -125,6 +125,7 @@ const emailLayout = (content: string, previewText: string = "") =>
   </noscript>
   <![endif]-->
   <style type="text/css">
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
     :root { color-scheme: light only; supported-color-schemes: light only; }
     [data-ogsc] body, [data-ogsb] body, .dark body, body.dark, body[data-outlook-cycle] {
       background-color: ${t.bg} !important; color: ${t.text} !important;
@@ -414,7 +415,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 export const sendOTPEmail = async (
   to: string,
   otp: string,
-  purpose: string
+  purpose: string,
+  context?: {
+    description?: string;
+    infoRows?: Array<{ label: string; value: string }>;
+    warningText?: string;
+  },
 ): Promise<boolean> => {
   const purposeLabel = purpose
     .replace(/_/g, " ")
@@ -431,6 +437,7 @@ export const sendOTPEmail = async (
   };
 
   const descText =
+    context?.description ||
     purposeDescriptions[purpose.toLowerCase()] ||
     `Use this OTP to complete your ${purposeLabel} verification.`;
 
@@ -442,6 +449,10 @@ export const sendOTPEmail = async (
   };
 
   const iconHtml = iconMap[purpose.toLowerCase()] || icons.otp;
+
+  const contextRows = (context?.infoRows || [])
+    .map((row) => htmlInfoRow(row.label, row.value))
+    .join("");
 
   const content = `
     ${htmlTitle(iconHtml, `${purposeLabel} Verification`)}
@@ -466,6 +477,7 @@ export const sendOTPEmail = async (
     </table>
     ${htmlInfoTable(
     htmlInfoRow("Purpose", htmlBadge(purposeLabel, "info")) +
+    contextRows +
     htmlInfoRow(
       "Valid Until",
       formatDateTime(
@@ -474,6 +486,7 @@ export const sendOTPEmail = async (
     )
   )}
     ${htmlWarningBox(
+    context?.warningText ||
     `<strong>Security Notice:</strong> Do not share this OTP with anyone. Our staff will never ask for your OTP. If you did not request this, please ignore this email or contact support immediately.`
   )}
   `;
@@ -500,8 +513,6 @@ export const sendLoginNotificationEmail = async (
   to: string,
   data: LoginNotificationData
 ): Promise<boolean> => {
-  const appUrl = env.cors.origin || "http://localhost:5173";
-
   const content = `
     ${htmlTitle(icons.login, "User Login Notification")}
     ${htmlAccentDivider()}
@@ -514,9 +525,6 @@ export const sendLoginNotificationEmail = async (
     htmlInfoRow("Email", data.userEmail) +
     htmlInfoRow("Role", htmlBadge(data.userRole, "info")) +
     htmlInfoRow("Login Time", formatDateTime(data.loginTime)) +
-    (data.ipAddress
-      ? htmlInfoRow("IP Address", data.ipAddress)
-      : "") +
     (data.userAgent
       ? htmlInfoRow(
         "Browser",
@@ -527,13 +535,6 @@ export const sendLoginNotificationEmail = async (
     ${htmlSuccessBox(
     `<strong>${data.userName}</strong> (${data.userRole}) logged in at ${formatDateTime(data.loginTime)}.`
   )}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
-      <tr>
-        <td align="center">
-          ${htmlButton("View Dashboard", `${appUrl}/dashboard`)}
-        </td>
-      </tr>
-    </table>
   `;
 
   return sendEmail({

@@ -7,17 +7,20 @@ import { parsePagination, buildPaginationMeta } from '../../utils/pagination.uti
 class EmailLogService {
   async findAll(query: any) {
     const pagination = parsePagination(query, 'createdAt', [
-      'createdAt', 'toEmail', 'type', 'status',
+      'createdAt', 'recipient', 'type', 'status', 'channel',
     ]);
 
     const where: any = {};
 
     if (query.search) {
       where[Op.or] = [
+        { recipient: { [Op.iLike]: `%${query.search}%` } },
         { toEmail: { [Op.iLike]: `%${query.search}%` } },
+        { toPhone: { [Op.iLike]: `%${query.search}%` } },
         { subject: { [Op.iLike]: `%${query.search}%` } },
       ];
     }
+    if (query.channel) where.channel = query.channel;
     if (query.type) where.type = query.type;
     if (query.status) where.status = query.status;
     if (query.startDate && query.endDate) {
@@ -64,12 +67,22 @@ class EmailLogService {
       where: { createdAt: { [Op.gte]: today } },
     });
 
+    const byChannel = await EmailLog.findAll({
+      attributes: [
+        'channel',
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      group: ['channel'],
+      raw: true,
+    });
+
     return {
       total,
       sent,
       failed,
       todayCount,
       byType,
+      byChannel,
     };
   }
 }

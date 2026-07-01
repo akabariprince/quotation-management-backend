@@ -14,6 +14,16 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/sales-persons', userController.getSalesPersons);
+router.post(
+  '/mobile-otp/request',
+  requirePermission(PERMISSIONS.USER_CREATE),
+  userController.requestMobileOTP,
+);
+router.post(
+  '/mobile-otp/verify',
+  requirePermission(PERMISSIONS.USER_CREATE),
+  userController.verifyMobileOTP,
+);
 router.get('/', requirePermission(PERMISSIONS.USER_VIEW), userController.getAll);
 router.get('/:id', requirePermission(PERMISSIONS.USER_VIEW), userController.getById);
 router.post('/', requirePermission(PERMISSIONS.USER_CREATE), validate(createUserSchema), userController.create);

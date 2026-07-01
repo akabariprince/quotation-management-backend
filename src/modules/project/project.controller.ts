@@ -66,9 +66,21 @@ class ProjectController {
 
   sendEmail = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { sendToCustomer, subject, message, type, userId } = req.body;
+    const {
+      sendToCustomer,
+      sendToCustomerEmail,
+      sendToCustomerWhatsApp,
+      subject,
+      message,
+      type,
+      userId,
+    } = req.body;
+    const shouldSendCustomer =
+      sendToCustomer === true ||
+      sendToCustomerEmail === true ||
+      sendToCustomerWhatsApp === true;
 
-    if (sendToCustomer === true) {
+    if (shouldSendCustomer) {
       const userPermissions = (req as any).user?.permissions || [];
       const roleName = (req as any).user?.roleName;
       const isUserAdmin = roleName === "admin";
@@ -82,7 +94,9 @@ class ProjectController {
     const result = await projectService.sendProjectEmail(
       id as string,
       {
-        sendToCustomer: sendToCustomer === true,
+        sendToCustomerEmail:
+          sendToCustomerEmail === true || sendToCustomer === true,
+        sendToCustomerWhatsApp: sendToCustomerWhatsApp === true,
         subject,
         message,
         type: type || "sent",

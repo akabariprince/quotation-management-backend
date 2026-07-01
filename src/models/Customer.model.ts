@@ -6,6 +6,9 @@ interface CustomerAttributes {
   id: string;
   name: string;
   mobile: string;
+  whatsappVerified: boolean;
+  whatsappVerifiedAt: Date | null;
+  whatsappVerifiedMobile: string | null;
   email: string | null;
   address: string | null;
   landmark: string | null;
@@ -32,6 +35,9 @@ interface CustomerCreationAttributes
     CustomerAttributes,
     | "id"
     | "email"
+    | "whatsappVerified"
+    | "whatsappVerifiedAt"
+    | "whatsappVerifiedMobile"
     | "address"
     | "landmark"
     | "gstin"
@@ -59,6 +65,9 @@ class Customer
   public id!: string;
   public name!: string;
   public mobile!: string;
+  public whatsappVerified!: boolean;
+  public whatsappVerifiedAt!: Date | null;
+  public whatsappVerifiedMobile!: string | null;
   public email!: string | null;
   public address!: string | null;
   public landmark!: string | null;
@@ -91,6 +100,22 @@ Customer.init(
     },
     name: { type: DataTypes.STRING(150), allowNull: false },
     mobile: { type: DataTypes.STRING(20), allowNull: false },
+    whatsappVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "whatsapp_verified",
+    },
+    whatsappVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "whatsapp_verified_at",
+    },
+    whatsappVerifiedMobile: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      field: "whatsapp_verified_mobile",
+    },
     email: { type: DataTypes.STRING(255), allowNull: true },
     address: { type: DataTypes.TEXT, allowNull: true },
     landmark: { type: DataTypes.STRING(255), allowNull: true },

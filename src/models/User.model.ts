@@ -7,6 +7,10 @@ interface UserAttributes {
   name: string;
   email: string;
   password: string;
+  mobile: string | null;
+  whatsappVerified: boolean;
+  whatsappVerifiedAt: Date | null;
+  whatsappVerifiedMobile: string | null;
   roleId: string;
   isActive: boolean;
   lastLogin: Date | null;
@@ -26,6 +30,10 @@ class User extends Model<UserAttributes, UserCreationAttributes>
   public name!: string;
   public email!: string;
   public password!: string;
+  public mobile!: string | null;
+  public whatsappVerified!: boolean;
+  public whatsappVerifiedAt!: Date | null;
+  public whatsappVerifiedMobile!: string | null;
   public roleId!: string;
   public isActive!: boolean;
   public lastLogin!: Date | null;
@@ -63,6 +71,26 @@ User.init({
   password: {
     type: DataTypes.STRING(255),
     allowNull: false,
+  },
+  mobile: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
+  whatsappVerified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: "whatsapp_verified",
+  },
+  whatsappVerifiedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: "whatsapp_verified_at",
+  },
+  whatsappVerifiedMobile: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: "whatsapp_verified_mobile",
   },
   roleId: {
     type: DataTypes.UUID,

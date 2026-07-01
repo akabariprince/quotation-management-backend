@@ -41,7 +41,15 @@ export class AuthController {
     res.json(ApiResponse.success(null, "Logged out successfully"));
   });
   requestOTP = asyncHandler(async (req: any, res: Response) => {
-    const { email, type, entityId, entityType, entityName, requestedBy } = req.body;
+    const {
+      email,
+      type,
+      entityId,
+      entityType,
+      entityName,
+      requestedBy,
+      metadata,
+    } = req.body;
 
     const result = await authService.requestOTP(
       email,
@@ -49,7 +57,8 @@ export class AuthController {
       requestedBy,
       entityId,
       entityType,
-      entityName
+      entityName,
+      metadata,
     );
     res.json(ApiResponse.success(result, "OTP sent successfully"));
   });
