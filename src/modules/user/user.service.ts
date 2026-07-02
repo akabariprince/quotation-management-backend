@@ -12,6 +12,10 @@ import { notificationService } from '../../services/notification.service';
 import { NOTIFICATION_TYPES } from '../../services/notification.constants';
 
 class UserService {
+  private normalizeEmail(email?: string | null) {
+    return email ? email.trim().toLowerCase() : null;
+  }
+
   private normalizeMobile(mobile: string) {
     let normalized = mobile.trim().replace(/\s+/g, "");
     if (!normalized.startsWith("+")) {
@@ -19,6 +23,68 @@ class UserService {
       normalized = digits.length === 10 ? `+91${digits}` : `+${digits}`;
     }
     return normalized;
+  }
+
+  private async assertUniqueUserFields(
+    input: {
+      email?: string | null;
+      mobile?: string | null;
+    },
+    excludeUserId?: string,
+  ) {
+    const checks: Array<Promise<void>> = [];
+
+    if (input.email) {
+      const normalizedEmail = this.normalizeEmail(input.email);
+      checks.push(
+        (async () => {
+          const existingUser = await User.findOne({
+            where: {
+              email: { [Op.iLike]: normalizedEmail as string },
+              ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
+            },
+            paranoid: false,
+          });
+
+          if (!existingUser) return;
+
+          if (existingUser.deletedAt) {
+            throw ApiError.conflict(
+              "Email is already linked to a deleted user. Please use a different email.",
+            );
+          }
+
+          throw ApiError.conflict("Email already exists");
+        })(),
+      );
+    }
+
+    if (input.mobile) {
+      const normalizedMobile = this.normalizeMobile(input.mobile);
+      checks.push(
+        (async () => {
+          const existingUser = await User.findOne({
+            where: {
+              mobile: normalizedMobile,
+              ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
+            },
+            paranoid: false,
+          });
+
+          if (!existingUser) return;
+
+          if (existingUser.deletedAt) {
+            throw ApiError.conflict(
+              "Mobile number is already linked to a deleted user. Please use a different mobile number.",
+            );
+          }
+
+          throw ApiError.conflict("Mobile number already exists");
+        })(),
+      );
+    }
+
+    await Promise.all(checks);
   }
 
   private async consumeVerification(
@@ -115,8 +181,11 @@ class UserService {
     delete data.whatsappVerified;
     delete data.whatsappVerifiedAt;
     delete data.whatsappVerifiedMobile;
-    const existingUser = await User.findOne({ where: { email: data.email } });
-    if (existingUser) throw ApiError.conflict('Email already exists');
+    data.email = this.normalizeEmail(data.email);
+    await this.assertUniqueUserFields({
+      email: data.email,
+      mobile: data.mobile || null,
+    });
 
     const role = await Role.findByPk(data.roleId);
     if (!role) throw ApiError.badRequest('Invalid role ID');
@@ -141,11 +210,8 @@ class UserService {
     const user = await User.findByPk(id);
     if (!user) throw ApiError.notFound('User not found');
 
-    if (data.email && data.email !== user.email) {
-      const existing = await User.findOne({
-        where: { email: data.email, id: { [Op.ne]: id } },
-      });
-      if (existing) throw ApiError.conflict('Email already exists');
+    if (data.email !== undefined) {
+      data.email = this.normalizeEmail(data.email);
     }
 
     if (data.roleId) {
@@ -177,6 +243,14 @@ class UserService {
         await this.consumeVerification(user.mobile, data.verificationOtpLogId),
       );
     }
+
+    await this.assertUniqueUserFields(
+      {
+        email: data.email !== undefined ? data.email : user.email,
+        mobile: data.mobile !== undefined ? data.mobile : user.mobile,
+      },
+      id,
+    );
 
     delete data.verificationOtpLogId;
 

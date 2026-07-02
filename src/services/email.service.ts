@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { env } from "../config/environment";
 import { logger } from "../utils/logger";
+import { formatIstDate, formatIstDateTime } from "../utils/time";
 import { getProjectPDFPath } from "./pdf.service";
 
 import { settingService } from "../modules/setting/setting.service";
@@ -330,21 +331,9 @@ const formatCurrency = (amount: number | string): string =>
     maximumFractionDigits: 0,
   }).format(Number(amount) || 0);
 
-const formatDate = (date: Date | string): string =>
-  new Date(date).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+const formatDate = (date: Date | string): string => formatIstDate(date);
 
-const formatDateTime = (date: Date | string): string =>
-  new Date(date).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const formatDateTime = (date: Date | string): string => formatIstDateTime(date);
 
 // ─── Core Send Function ──────────────────────────────────────────────────
 export interface EmailOptions {

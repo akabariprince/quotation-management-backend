@@ -16,6 +16,10 @@ import { notificationService } from '../../services/notification.service';
 import { NOTIFICATION_TYPES } from '../../services/notification.constants';
 
 class CustomerService {
+  private normalizeEmail(email?: string | null) {
+    return email ? email.trim().toLowerCase() : null;
+  }
+
   private normalizeMobile(mobile: string) {
     let normalized = mobile.trim().replace(/\s+/g, "");
     if (!normalized.startsWith("+")) {
@@ -24,6 +28,68 @@ class CustomerService {
       else normalized = `+${digits}`;
     }
     return normalized;
+  }
+
+  private async assertUniqueCustomerFields(
+    input: {
+      mobile?: string | null;
+      email?: string | null;
+    },
+    excludeCustomerId?: string,
+  ) {
+    const checks: Array<Promise<void>> = [];
+
+    if (input.mobile) {
+      const normalizedMobile = this.normalizeMobile(input.mobile);
+      checks.push(
+        (async () => {
+          const existingCustomer = await Customer.findOne({
+            where: {
+              mobile: normalizedMobile,
+              ...(excludeCustomerId ? { id: { [Op.ne]: excludeCustomerId } } : {}),
+            },
+            paranoid: false,
+          });
+
+          if (!existingCustomer) return;
+
+          if (existingCustomer.deletedAt) {
+            throw ApiError.conflict(
+              "Mobile number is already linked to a deleted customer. Please use a different mobile number.",
+            );
+          }
+
+          throw ApiError.conflict("Mobile number already exists");
+        })(),
+      );
+    }
+
+    if (input.email) {
+      const normalizedEmail = this.normalizeEmail(input.email);
+      checks.push(
+        (async () => {
+          const existingCustomer = await Customer.findOne({
+            where: {
+              email: { [Op.iLike]: normalizedEmail as string },
+              ...(excludeCustomerId ? { id: { [Op.ne]: excludeCustomerId } } : {}),
+            },
+            paranoid: false,
+          });
+
+          if (!existingCustomer) return;
+
+          if (existingCustomer.deletedAt) {
+            throw ApiError.conflict(
+              "Email is already linked to a deleted customer. Please use a different email.",
+            );
+          }
+
+          throw ApiError.conflict("Email already exists");
+        })(),
+      );
+    }
+
+    await Promise.all(checks);
   }
 
   private async consumeVerification(
@@ -133,6 +199,11 @@ class CustomerService {
   /* ─────────────────── CREATE ─────────────────── */
   async create(data: any, authUser: AuthUser) {
     const normalizedMobile = this.normalizeMobile(data.mobile);
+    const normalizedEmail = this.normalizeEmail(data.email);
+    await this.assertUniqueCustomerFields({
+      mobile: normalizedMobile,
+      email: normalizedEmail,
+    });
     const verification = await this.consumeVerification(
       normalizedMobile,
       data.verificationOtpLogId,
@@ -142,6 +213,7 @@ class CustomerService {
     return Customer.create({
       ...createData,
       mobile: normalizedMobile,
+      email: normalizedEmail,
       ...verification,
       createdBy: authUser.id,
     });
@@ -152,6 +224,10 @@ class CustomerService {
     const customer = await this.findById(id);
     this.assertOwnership(customer, authUser, 'edit');
     const updateData = { ...data };
+
+    if (updateData.email !== undefined) {
+      updateData.email = this.normalizeEmail(updateData.email);
+    }
 
     if (updateData.mobile !== undefined) {
       const normalizedMobile = this.normalizeMobile(updateData.mobile);
@@ -181,6 +257,14 @@ class CustomerService {
       );
       Object.assign(updateData, verification);
     }
+
+    await this.assertUniqueCustomerFields(
+      {
+        mobile: updateData.mobile !== undefined ? updateData.mobile : customer.mobile,
+        email: updateData.email !== undefined ? updateData.email : customer.email,
+      },
+      id,
+    );
 
     delete updateData.verificationOtpLogId;
     await customer.update(updateData);
