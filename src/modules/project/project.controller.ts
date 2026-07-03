@@ -42,9 +42,11 @@ class ProjectController {
   });
 
   updateStatus = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user?.id || (req as any).user?.userId || null;
     const project = await projectService.updateStatus(
       req.params.id as string,
       req.body.status,
+      userId,
     );
     res.json(ApiResponse.success(project, "Project status updated"));
   });
@@ -87,7 +89,9 @@ class ProjectController {
       const hasSendCustomerPermission = isUserAdmin || userPermissions.includes("project:send_customer");
 
       if (!hasSendCustomerPermission) {
-        throw ApiError.forbidden("You do not have permission to send emails to customers");
+        throw ApiError.forbidden(
+          "You do not have permission to send project email or WhatsApp messages to customers",
+        );
       }
     }
 

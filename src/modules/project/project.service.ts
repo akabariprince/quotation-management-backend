@@ -38,6 +38,7 @@ const projectIncludes: Includeable[] = [
       "name",
       "mobile",
       "whatsappVerified",
+      "emailVerified",
       "email",
       "address",
       "landmark",
@@ -204,7 +205,16 @@ class ProjectService {
         {
           model: Customer,
           as: "customer",
-          attributes: ["id", "name", "mobile", "email", "city", "state"],
+          attributes: [
+            "id",
+            "name",
+            "mobile",
+            "whatsappVerified",
+            "emailVerified",
+            "email",
+            "city",
+            "state",
+          ],
         },
         {
           model: User,
@@ -220,10 +230,9 @@ class ProjectService {
     });
 
     const projectIds = rows.map((row) => row.id);
-    const whatsappLogs = projectIds.length
+    const notificationLogs = projectIds.length
       ? await EmailLog.findAll({
           where: {
-            channel: "whatsapp",
             type: NOTIFICATION_TYPES.projectQuotation,
             referenceType: "project",
             referenceId: { [Op.in]: projectIds },
@@ -233,19 +242,46 @@ class ProjectService {
       : [];
 
     const whatsappLogMap = new Map<string, any>();
-    for (const log of whatsappLogs) {
-      if (log.referenceId && !whatsappLogMap.has(log.referenceId)) {
+    const customerNotificationMap = new Map<
+      string,
+      { emailSent: boolean; whatsappSent: boolean }
+    >();
+    for (const log of notificationLogs) {
+      if (
+        log.referenceId &&
+        log.channel === "whatsapp" &&
+        !whatsappLogMap.has(log.referenceId)
+      ) {
         whatsappLogMap.set(log.referenceId, log);
+      }
+
+      const audience = (log.requestPayload as any)?.audience;
+      if (log.referenceId && audience === "customer" && log.status !== "failed") {
+        const current = customerNotificationMap.get(log.referenceId) || {
+          emailSent: false,
+          whatsappSent: false,
+        };
+        if (log.channel === "email") current.emailSent = true;
+        if (log.channel === "whatsapp") current.whatsappSent = true;
+        customerNotificationMap.set(log.referenceId, current);
       }
     }
 
     const data = rows.map((row: any) => {
       const project = row.toJSON();
       const whatsappLog = whatsappLogMap.get(project.id);
+      const customerNotification = customerNotificationMap.get(project.id) || {
+        emailSent: false,
+        whatsappSent: false,
+      };
       return {
         ...project,
         whatsappSent: Boolean(whatsappLog),
         whatsappStatus: whatsappLog?.status || null,
+        customerNotificationSent:
+          customerNotification.emailSent || customerNotification.whatsappSent,
+        customerEmailSent: customerNotification.emailSent,
+        customerWhatsAppSent: customerNotification.whatsappSent,
       };
     });
 
@@ -345,7 +381,7 @@ class ProjectService {
   }
 
   // ────────────────────────────────────────────────────────
-  async updateStatus(id: string, status: string) {
+  async updateStatus(id: string, status: string, userId?: string | null) {
     const project = await Project.findByPk(id);
     if (!project) throw ApiError.notFound("Project not found");
     await project.update({ status: status as any });
@@ -356,6 +392,47 @@ class ProjectService {
     if (status === "sent") {
       const fullProject = await this.findById(id);
       await pdfPrintLogService.createSnapshot(fullProject, null);
+    }
+
+    if (status === "approved") {
+      const fullProject: any = await this.findById(id);
+      const customer = fullProject.customer;
+      const salesPerson = fullProject.salesPerson;
+
+      const projectEmailData: ProjectEmailData = {
+        recipientName: customer?.name || "Customer",
+        projectNo: fullProject.projectNo,
+        projectId: fullProject.id,
+        customerName: customer?.name || "Unknown",
+        projectName: fullProject.projectName || "Project",
+        date: fullProject.date,
+        salesPersonName: salesPerson?.name || "N/A",
+        items: (fullProject.items || []).map((item: any) => ({
+          productCode: item.quotationCode,
+          productName: item.quotationName,
+          quantity: Number(item.quantity) || 1,
+          finalPrice: Number(item.finalPrice) || 0,
+          total: Number(item.total) || 0,
+        })),
+        grandTotal: Number(fullProject.grandTotal) || 0,
+        cgst: Number(fullProject.cgst) || 0,
+        sgst: Number(fullProject.sgst) || 0,
+        grandTotalWithGst: Number(fullProject.grandTotalWithGst) || 0,
+        totalDiscount: Number(fullProject.totalDiscount) || 0,
+      };
+
+      this.sendProjectEmailsInBackground(
+        projectEmailData,
+        "approved",
+        `Approved Quotation ${fullProject.projectNo} - Ecstatics Spaces India`,
+        Boolean(customer?.email),
+        Boolean(customer?.mobile && customer?.whatsappVerified),
+        customer?.email || undefined,
+        customer?.mobile || undefined,
+        Boolean(customer?.whatsappVerified),
+        fullProject.id,
+        userId || null,
+      );
     }
 
     return this.findById(id);
@@ -474,7 +551,9 @@ class ProjectService {
   }
 
   // ★ Helper to get admin emails (same pattern as auth.service)
-  private async getAdminEmails(): Promise<string[]> {
+  private async getAdminRecipients(): Promise<
+    Array<{ email: string; mobile: string | null; whatsappVerified: boolean }>
+  > {
     try {
       const adminUsers = await User.findAll({
         where: { isActive: true },
@@ -489,14 +568,25 @@ class ProjectService {
             attributes: ["id", "name"],
           },
         ],
-        attributes: ["id", "email"],
+        attributes: ["id", "email", "mobile", "whatsappVerified"],
       });
 
-      return adminUsers.map((u: any) => u.email).filter(Boolean);
+      return adminUsers
+        .map((u: any) => ({
+          email: u.email,
+          mobile: u.mobile || null,
+          whatsappVerified: Boolean(u.whatsappVerified),
+        }))
+        .filter((u) => u.email);
     } catch (error) {
       logger.error("Failed to fetch admin emails:", error);
       return [];
     }
+  }
+
+  private async getAdminEmails(): Promise<string[]> {
+    const admins = await this.getAdminRecipients();
+    return admins.map((u) => u.email).filter(Boolean);
   }
 
   async sendProjectEmail(
@@ -597,7 +687,7 @@ class ProjectService {
     customerMobile: string | undefined,
     customerWhatsAppVerified: boolean,
     projectId: string,
-    userId: string,
+    userId: string | null,
   ): Promise<void> {
     try {
       const publicApiBaseUrl = String(process.env.API_BASE_URL || "")
@@ -610,12 +700,12 @@ class ProjectService {
         );
 
       // 1) Always send to admins
-      const adminEmails = await this.getAdminEmails();
-      for (const adminEmail of adminEmails) {
+      const adminRecipients = await this.getAdminRecipients();
+      for (const adminRecipient of adminRecipients) {
         await notificationService.dispatchEmail({
           notificationType: NOTIFICATION_TYPES.projectQuotation,
-          recipient: adminEmail,
-          toEmail: adminEmail,
+          recipient: adminRecipient.email,
+          toEmail: adminRecipient.email,
           subject,
           referenceId: projectId,
           referenceType: "project",
@@ -623,11 +713,46 @@ class ProjectService {
           requestPayload: { emailType, audience: "admin", projectNo: data.projectNo },
           sendFn: () =>
             sendProjectEmail(
-              adminEmail,
+              adminRecipient.email,
               { ...data, recipientName: "Admin" },
               emailType,
             ),
         });
+
+        if (adminRecipient.mobile && adminRecipient.whatsappVerified) {
+          await notificationService.dispatchWhatsApp({
+            notificationType: NOTIFICATION_TYPES.projectQuotation,
+            recipient: adminRecipient.mobile,
+            toPhone: adminRecipient.mobile,
+            subject,
+            referenceId: projectId,
+            referenceType: "project",
+            sentBy: userId,
+            requestPayload: {
+              emailType,
+              audience: "admin",
+              projectNo: data.projectNo,
+            },
+            templateParameters: [
+              "Admin",
+              new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(Number(data.grandTotalWithGst) || 0),
+              data.projectNo || "",
+              data.customerName || "",
+              String(data.items?.length || 0),
+              new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(Number(data.grandTotalWithGst) || 0),
+            ],
+            headerDocumentUrl: `${publicApiBaseUrl}/uploads/pdfs/${projectId}.pdf`,
+            headerDocumentFilename: `${data.projectNo || projectId}.pdf`,
+          });
+        }
       }
 
       // 2) Optionally send to customer

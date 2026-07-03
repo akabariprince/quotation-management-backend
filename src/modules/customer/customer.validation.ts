@@ -4,6 +4,7 @@ const customerBody = z.object({
   name: z.string().min(1, "Name is required").max(150),
   mobile: z.string().min(10, "Valid mobile is required").max(20),
   verificationOtpLogId: z.string().uuid().optional().nullable(),
+  emailVerificationOtpLogId: z.string().uuid().optional().nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().optional().nullable(),
   gstin: z.string().max(15).optional().nullable(),
@@ -33,6 +34,20 @@ export const requestCustomerMobileOTPSchema = z.object({
 export const verifyCustomerMobileOTPSchema = z.object({
   body: z.object({
     mobile: z.string().min(10, "Valid mobile is required").max(20),
+    otp: z.string().length(6, "OTP must be 6 digits"),
+    otpLogId: z.string().uuid("Invalid OTP log ID"),
+  }),
+});
+
+export const requestCustomerEmailOTPSchema = z.object({
+  body: z.object({
+    email: z.string().email("Valid email is required"),
+  }),
+});
+
+export const verifyCustomerEmailOTPSchema = z.object({
+  body: z.object({
+    email: z.string().email("Valid email is required"),
     otp: z.string().length(6, "OTP must be 6 digits"),
     otpLogId: z.string().uuid("Invalid OTP log ID"),
   }),

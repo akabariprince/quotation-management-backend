@@ -2,6 +2,7 @@ import crypto from "crypto";
 import https from "https";
 import { URL } from "url";
 import { NotificationType, WhatsAppConfig } from "./notification.constants";
+import { logger } from "../utils/logger";
 
 export interface WhatsAppTemplateParameter {
   type: "text";
@@ -243,7 +244,6 @@ export class WhatsAppService {
     payload: WhatsAppTemplatePayload,
   ): Promise<WhatsAppSendResult> {
     const requestPayload = this.buildTemplateRequest(payload);
-    console.log("WhatsApp template request:", JSON.stringify(requestPayload, null, 2));
     try {
       const response = await requestJson(
         "POST",
@@ -255,13 +255,16 @@ export class WhatsAppService {
         },
         requestPayload,
       );
-      console.log("WhatsApp template headers:", {
-          Authorization: `Bearer ${payload.config.apiKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": payload.idempotencyKey,
-        });
-      console.log("WhatsApp template response:", JSON.stringify(response.body, null, 2));
       const ok = response.status >= 200 && response.status < 300;
+      if (ok) {
+        logger.info(
+          `WhatsApp send ${String(response.body?.status || "SENT").toUpperCase()} | template=${payload.templateName} | to=${payload.to} | type=${payload.notificationType} | status=${response.status}`,
+        );
+      } else {
+        logger.warn(
+          `WhatsApp send FAILED | template=${payload.templateName} | to=${payload.to} | type=${payload.notificationType} | status=${response.status} | message=${response.body?.message || "WhatsApp send failed"}`,
+        );
+      }
       return {
         ok,
         status: response.status,
@@ -274,6 +277,9 @@ export class WhatsAppService {
         requestPayload,
       };
     } catch (error: any) {
+      logger.error(
+        `WhatsApp send ERROR | template=${payload.templateName} | to=${payload.to} | type=${payload.notificationType} | message=${error?.message || "WhatsApp send failed"}`,
+      );
       return {
         ok: false,
         status: 500,

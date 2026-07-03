@@ -14,6 +14,7 @@ import { generateOTP, hashOTP, isOTPExpired, verifyOTP } from '../../utils/otp.u
 import { env } from '../../config/environment';
 import { notificationService } from '../../services/notification.service';
 import { NOTIFICATION_TYPES } from '../../services/notification.constants';
+import { sendOTPEmail } from '../../services/email.service';
 
 class CustomerService {
   private normalizeEmail(email?: string | null) {
@@ -48,16 +49,9 @@ class CustomerService {
               mobile: normalizedMobile,
               ...(excludeCustomerId ? { id: { [Op.ne]: excludeCustomerId } } : {}),
             },
-            paranoid: false,
           });
 
           if (!existingCustomer) return;
-
-          if (existingCustomer.deletedAt) {
-            throw ApiError.conflict(
-              "Mobile number is already linked to a deleted customer. Please use a different mobile number.",
-            );
-          }
 
           throw ApiError.conflict("Mobile number already exists");
         })(),
@@ -73,16 +67,9 @@ class CustomerService {
               email: { [Op.iLike]: normalizedEmail as string },
               ...(excludeCustomerId ? { id: { [Op.ne]: excludeCustomerId } } : {}),
             },
-            paranoid: false,
           });
 
           if (!existingCustomer) return;
-
-          if (existingCustomer.deletedAt) {
-            throw ApiError.conflict(
-              "Email is already linked to a deleted customer. Please use a different email.",
-            );
-          }
 
           throw ApiError.conflict("Email already exists");
         })(),
@@ -125,6 +112,50 @@ class CustomerService {
       whatsappVerified: true,
       whatsappVerifiedAt: otpLog.approvedAt || new Date(),
       whatsappVerifiedMobile: mobile,
+    };
+  }
+
+  private async consumeEmailVerification(
+    email?: string | null,
+    verificationOtpLogId?: string | null,
+  ) {
+    if (!email || !verificationOtpLogId) {
+      return {
+        emailVerified: false,
+        emailVerifiedAt: null,
+        emailVerifiedEmail: null,
+      };
+    }
+
+    const normalizedEmail = this.normalizeEmail(email);
+    if (!normalizedEmail) {
+      return {
+        emailVerified: false,
+        emailVerifiedAt: null,
+        emailVerifiedEmail: null,
+      };
+    }
+    const otpLog = await OTPLog.findOne({
+      where: {
+        id: verificationOtpLogId,
+        email: normalizedEmail,
+        type: "customer_email_verification",
+        status: "approved",
+      },
+    });
+
+    if (!otpLog) {
+      return {
+        emailVerified: false,
+        emailVerifiedAt: null,
+        emailVerifiedEmail: null,
+      };
+    }
+
+    return {
+      emailVerified: true,
+      emailVerifiedAt: otpLog.approvedAt || new Date(),
+      emailVerifiedEmail: normalizedEmail,
     };
   }
 
@@ -208,13 +239,19 @@ class CustomerService {
       normalizedMobile,
       data.verificationOtpLogId,
     );
+    const emailVerification = await this.consumeEmailVerification(
+      normalizedEmail,
+      data.emailVerificationOtpLogId,
+    );
     const createData = { ...data };
     delete createData.verificationOtpLogId;
+    delete createData.emailVerificationOtpLogId;
     return Customer.create({
       ...createData,
       mobile: normalizedMobile,
       email: normalizedEmail,
       ...verification,
+      ...emailVerification,
       createdBy: authUser.id,
     });
   }
@@ -227,6 +264,22 @@ class CustomerService {
 
     if (updateData.email !== undefined) {
       updateData.email = this.normalizeEmail(updateData.email);
+
+      if (updateData.email !== customer.email) {
+        const emailVerification = await this.consumeEmailVerification(
+          updateData.email,
+          updateData.emailVerificationOtpLogId,
+        );
+        Object.assign(updateData, emailVerification);
+      } else if (updateData.emailVerificationOtpLogId) {
+        const emailVerification = await this.consumeEmailVerification(
+          updateData.email,
+          updateData.emailVerificationOtpLogId,
+        );
+        Object.assign(updateData, emailVerification);
+      } else {
+        delete updateData.emailVerificationOtpLogId;
+      }
     }
 
     if (updateData.mobile !== undefined) {
@@ -258,6 +311,14 @@ class CustomerService {
       Object.assign(updateData, verification);
     }
 
+    if (!('email' in updateData) && updateData.emailVerificationOtpLogId) {
+      const emailVerification = await this.consumeEmailVerification(
+        customer.email,
+        updateData.emailVerificationOtpLogId,
+      );
+      Object.assign(updateData, emailVerification);
+    }
+
     await this.assertUniqueCustomerFields(
       {
         mobile: updateData.mobile !== undefined ? updateData.mobile : customer.mobile,
@@ -267,6 +328,7 @@ class CustomerService {
     );
 
     delete updateData.verificationOtpLogId;
+    delete updateData.emailVerificationOtpLogId;
     await customer.update(updateData);
     return customer;
   }
@@ -377,6 +439,107 @@ class CustomerService {
       success: true,
       otpLogId: otpLog.id,
       verifiedMobile: normalizedMobile,
+      verifiedAt: otpLog.approvedAt,
+    };
+  }
+
+  async requestEmailOTP(email: string, authUser: AuthUser) {
+    const normalizedEmail = this.normalizeEmail(email);
+
+    if (!normalizedEmail) {
+      throw ApiError.badRequest("Valid email is required");
+    }
+
+    await OTPLog.update(
+      { status: "expired" },
+      {
+        where: {
+          email: normalizedEmail,
+          type: "customer_email_verification",
+          status: "pending",
+        },
+      },
+    );
+
+    const otp = generateOTP();
+    const otpHash = await hashOTP(otp);
+    const expiresAt = new Date(
+      Date.now() + env.otp.expiryMinutes * 60 * 1000,
+    );
+
+    const otpLog = await OTPLog.create({
+      type: "customer_email_verification",
+      entityType: "customer",
+      email: normalizedEmail,
+      otpHash,
+      requestedBy: authUser.id,
+      status: "pending",
+      attempts: 0,
+      maxAttempts: 5,
+      expiresAt,
+    });
+
+    const sent = await sendOTPEmail(
+      normalizedEmail,
+      otp,
+      "customer email verification",
+      {
+        description: "Use this OTP to verify the customer email address in ESIPL.",
+      },
+    );
+
+    if (!sent) {
+      throw ApiError.internal("Failed to send email OTP");
+    }
+
+    return {
+      otpLogId: otpLog.id,
+      expiresAt,
+      email: normalizedEmail,
+    };
+  }
+
+  async verifyEmailOTP(email: string, otp: string, otpLogId: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    if (!normalizedEmail) {
+      throw ApiError.badRequest("Valid email is required");
+    }
+    const otpLog = await OTPLog.findOne({
+      where: {
+        id: otpLogId,
+        email: normalizedEmail,
+        type: "customer_email_verification",
+        status: "pending",
+      },
+    });
+
+    if (!otpLog) throw ApiError.badRequest("Invalid OTP request");
+
+    if (isOTPExpired(otpLog.createdAt, env.otp.expiryMinutes)) {
+      await otpLog.update({ status: "expired" });
+      throw ApiError.badRequest("OTP has expired");
+    }
+
+    if (otpLog.maxAttempts > 0 && otpLog.attempts >= otpLog.maxAttempts) {
+      await otpLog.update({ status: "expired" });
+      throw ApiError.badRequest("Maximum OTP attempts exceeded");
+    }
+
+    const isValid = await verifyOTP(otp, otpLog.otpHash);
+    if (!isValid) {
+      await otpLog.update({ attempts: otpLog.attempts + 1 });
+      throw ApiError.badRequest("Invalid OTP");
+    }
+
+    await otpLog.update({
+      status: "approved",
+      approvedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      otpLogId: otpLog.id,
+      verifiedEmail: normalizedEmail,
       verifiedAt: otpLog.approvedAt,
     };
   }

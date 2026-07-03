@@ -51,6 +51,23 @@ class UserController {
     );
     res.json(ApiResponse.success(result, "WhatsApp mobile verified"));
   });
+
+  requestEmailOTP = asyncHandler(async (req: any, res: Response) => {
+    const result = await userService.requestEmailOTP(
+      req.body.email,
+      req.user?.userId || req.user?.id,
+    );
+    res.json(ApiResponse.success(result, "Email OTP sent"));
+  });
+
+  verifyEmailOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await userService.verifyEmailOTP(
+      req.body.email,
+      req.body.otp,
+      req.body.otpLogId,
+    );
+    res.json(ApiResponse.success(result, "Email verified"));
+  });
 }
 
 export const userController = new UserController();

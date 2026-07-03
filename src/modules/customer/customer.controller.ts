@@ -32,6 +32,23 @@ class CustomerController {
     res.json(ApiResponse.success(result, 'WhatsApp OTP verified'));
   });
 
+  requestEmailOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await customerService.requestEmailOTP(
+      req.body.email,
+      req.user!,
+    );
+    res.json(ApiResponse.success(result, 'Email OTP sent'));
+  });
+
+  verifyEmailOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await customerService.verifyEmailOTP(
+      req.body.email,
+      req.body.otp,
+      req.body.otpLogId,
+    );
+    res.json(ApiResponse.success(result, 'Email OTP verified'));
+  });
+
   create = asyncHandler(async (req: Request, res: Response) => {
     const customer = await customerService.create(req.body, req.user!);
     res.status(201).json(ApiResponse.created(customer, 'Customer created'));

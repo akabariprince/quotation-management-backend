@@ -10,6 +10,9 @@ interface CustomerAttributes {
   whatsappVerifiedAt: Date | null;
   whatsappVerifiedMobile: string | null;
   email: string | null;
+  emailVerified: boolean;
+  emailVerifiedAt: Date | null;
+  emailVerifiedEmail: string | null;
   address: string | null;
   landmark: string | null;
   gstin: string | null;
@@ -35,6 +38,9 @@ interface CustomerCreationAttributes
     CustomerAttributes,
     | "id"
     | "email"
+    | "emailVerified"
+    | "emailVerifiedAt"
+    | "emailVerifiedEmail"
     | "whatsappVerified"
     | "whatsappVerifiedAt"
     | "whatsappVerifiedMobile"
@@ -69,6 +75,9 @@ class Customer
   public whatsappVerifiedAt!: Date | null;
   public whatsappVerifiedMobile!: string | null;
   public email!: string | null;
+  public emailVerified!: boolean;
+  public emailVerifiedAt!: Date | null;
+  public emailVerifiedEmail!: string | null;
   public address!: string | null;
   public landmark!: string | null;
   public gstin!: string | null;
@@ -117,6 +126,22 @@ Customer.init(
       field: "whatsapp_verified_mobile",
     },
     email: { type: DataTypes.STRING(255), allowNull: true },
+    emailVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "email_verified",
+    },
+    emailVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "email_verified_at",
+    },
+    emailVerifiedEmail: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: "email_verified_email",
+    },
     address: { type: DataTypes.TEXT, allowNull: true },
     landmark: { type: DataTypes.STRING(255), allowNull: true },
     gstin: { type: DataTypes.STRING(15), allowNull: true },

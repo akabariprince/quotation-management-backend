@@ -155,7 +155,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "project:delete": "Delete Project",
   "project:approve": "Approve Project",
   "project:send": "Send Project",
-  "project:send_customer": "Send Project Email to Customer",
+  "project:send_customer": "Send Project Email or WhatsApp Message to Customer",
 
   "user:view": "View Users",
   "user:create": "Create User",

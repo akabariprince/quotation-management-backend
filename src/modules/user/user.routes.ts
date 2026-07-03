@@ -3,7 +3,14 @@ import { Router } from 'express';
 import { userController } from './user.controller';
 import { validate } from '../../middleware/validate.middleware';
 import { authenticate, requirePermission } from '../../middleware/auth.middleware';
-import { createUserSchema, updateUserSchema } from './user.validation';
+import {
+  createUserSchema,
+  requestUserEmailOTPSchema,
+  requestUserMobileOTPSchema,
+  updateUserSchema,
+  verifyUserEmailOTPSchema,
+  verifyUserMobileOTPSchema,
+} from './user.validation';
 import { PERMISSIONS } from '../../utils/permissions';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { Request, Response } from "express";
@@ -16,13 +23,23 @@ router.use(authenticate);
 router.get('/sales-persons', userController.getSalesPersons);
 router.post(
   '/mobile-otp/request',
-  requirePermission(PERMISSIONS.USER_CREATE),
+  validate(requestUserMobileOTPSchema),
   userController.requestMobileOTP,
 );
 router.post(
   '/mobile-otp/verify',
-  requirePermission(PERMISSIONS.USER_CREATE),
+  validate(verifyUserMobileOTPSchema),
   userController.verifyMobileOTP,
+);
+router.post(
+  '/email-otp/request',
+  validate(requestUserEmailOTPSchema),
+  userController.requestEmailOTP,
+);
+router.post(
+  '/email-otp/verify',
+  validate(verifyUserEmailOTPSchema),
+  userController.verifyEmailOTP,
 );
 router.get('/', requirePermission(PERMISSIONS.USER_VIEW), userController.getAll);
 router.get('/:id', requirePermission(PERMISSIONS.USER_VIEW), userController.getById);

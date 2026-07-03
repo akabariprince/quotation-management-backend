@@ -5,8 +5,10 @@ import { validate } from '../../middleware/validate.middleware';
 import { authenticate } from '../../middleware/auth.middleware';
 import {
   createCustomerSchema,
+  requestCustomerEmailOTPSchema,
   requestCustomerMobileOTPSchema,
   updateCustomerSchema,
+  verifyCustomerEmailOTPSchema,
   verifyCustomerMobileOTPSchema,
 } from './customer.validation';
 
@@ -24,6 +26,16 @@ router.post(
   '/mobile-otp/verify',
   validate(verifyCustomerMobileOTPSchema),
   customerController.verifyMobileOTP,
+);
+router.post(
+  '/email-otp/request',
+  validate(requestCustomerEmailOTPSchema),
+  customerController.requestEmailOTP,
+);
+router.post(
+  '/email-otp/verify',
+  validate(verifyCustomerEmailOTPSchema),
+  customerController.verifyEmailOTP,
 );
 router.get('/:id', customerController.getById);
 router.post('/', validate(createCustomerSchema), customerController.create);
