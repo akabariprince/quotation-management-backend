@@ -344,7 +344,12 @@ export class NotificationService {
       status: mapProviderStatus(result.providerStatus),
       providerMessageId: result.providerMessageId,
       providerStatus: result.providerStatus,
-      requestPayload: result.requestPayload,
+      requestPayload: {
+        ...input.requestPayload,
+        templateParameters: input.templateParameters,
+        templateName,
+        providerRequest: result.requestPayload,
+      },
       responsePayload: result.body,
       sentBy: input.sentBy,
       sentAt: result.ok ? new Date() : null,
